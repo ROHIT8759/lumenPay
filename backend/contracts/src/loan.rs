@@ -6,7 +6,7 @@
 
 
 use soroban_sdk::{
-    contract, contractimpl, contracttype, Env, Address, String, token, Symbol,
+    contract, contractimpl, contracttype, Env, Address, token, Symbol,
 };
 
 #[contracttype]
@@ -97,34 +97,15 @@ impl LoanContract {
         amount: i128,
     ) -> bool {
         
-        let loan: LoanData = env
+        let loan: Option<LoanData> = env
             .storage()
             .persistent()
-            .get(&(loan_id, Symbol::new(&env, "loan")))
-            .unwrap_or(Ok(LoanData {
-                borrower: Address::random(&env),
-                lender: Address::random(&env),
-                principal_amount: 0,
-                amount_repaid: 0,
-                interest_rate_bps: 0,
-                tenure_months: 0,
-                start_time: 0,
-                next_emi_due: 0,
-                is_active: false,
-                is_defaulted: false,
-            }))
-            .unwrap_or_else(|_| LoanData {
-                borrower: Address::random(&env),
-                lender: Address::random(&env),
-                principal_amount: 0,
-                amount_repaid: 0,
-                interest_rate_bps: 0,
-                tenure_months: 0,
-                start_time: 0,
-                next_emi_due: 0,
-                is_active: false,
-                is_defaulted: false,
-            });
+            .get(&(loan_id, Symbol::new(&env, "loan")));
+
+        let loan = match loan {
+            Some(l) => l,
+            None => return false,
+        };
 
         if !loan.is_active {
             return false;
@@ -164,30 +145,19 @@ impl LoanContract {
         env.storage()
             .persistent()
             .get(&(loan_id, Symbol::new(&env, "loan")))
-            .ok()
-            .flatten()
     }
 
     
     pub fn mark_default(env: Env, loan_id: u64) -> bool {
-        let mut loan: LoanData = env
+        let loan_opt: Option<LoanData> = env
             .storage()
             .persistent()
-            .get(&(loan_id, Symbol::new(&env, "loan")))
-            .ok()
-            .flatten()
-            .unwrap_or_else(|| LoanData {
-                borrower: Address::random(&env),
-                lender: Address::random(&env),
-                principal_amount: 0,
-                amount_repaid: 0,
-                interest_rate_bps: 0,
-                tenure_months: 0,
-                start_time: 0,
-                next_emi_due: 0,
-                is_active: false,
-                is_defaulted: false,
-            });
+            .get(&(loan_id, Symbol::new(&env, "loan")));
+
+        let mut loan = match loan_opt {
+            Some(l) => l,
+            None => return false,
+        };
 
         loan.lender.require_auth();
 
@@ -218,31 +188,5 @@ mod tests {
     #[test]
     fn test_create_loan() {
         
-    }
-}
-        
-        env.events().publish((symbol_short!("loan"), symbol_short!("create")), id);
-    }
-    
-    pub fn repay(env: Env, id: u64, token: Address, amount: i128) {
-        let mut loan: LoanData = env.storage().persistent().get(&id).unwrap();
-        loan.borrower.require_auth();
-        
-        
-        let client = token::Client::new(&env, &token);
-        client.transfer(&loan.borrower, &loan.lender, &amount);
-        
-        loan.amount_repaid += amount;
-        
-        if loan.amount_repaid >= loan.amount_total {
-            loan.is_active = false;
-        }
-        
-        env.storage().persistent().set(&id, &loan);
-        env.events().publish((symbol_short!("loan"), symbol_short!("repay")), (id, amount));
-    }
-    
-    pub fn get_loan(env: Env, id: u64) -> LoanData {
-        env.storage().persistent().get(&id).unwrap()
     }
 }
