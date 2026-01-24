@@ -2,12 +2,13 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Activity, RefreshCw, Database, AlertCircle, TrendingUp, Layers, Clock, Zap } from 'lucide-react';
+import { Activity, RefreshCw, Database, AlertCircle, TrendingUp, Layers, Clock, Zap, Code } from 'lucide-react';
 import ExpoSearchBar from './SearchBar';
 import TransactionTable from './TransactionTable';
 import TransactionDetail from './TransactionDetail';
 import WalletView from './WalletView';
 import { fetchRecentTransactions, ExpoTransaction, StellarNetwork } from '@/lib/horizonService';
+import { checkContractStatus, getContractInfo } from '@/lib/contractService';
 
 interface NetworkStats {
     latestLedger: number;
@@ -16,6 +17,13 @@ interface NetworkStats {
     operationCount: number;
     averageFee: string;
     baseReserve: string;
+}
+
+interface ContractStatus {
+    isConfigured: boolean;
+    isAccessible: boolean;
+    contractId: string;
+    error?: string;
 }
 
 export default function ExpoPage() {
@@ -28,10 +36,12 @@ export default function ExpoPage() {
     const [network, setNetwork] = useState<StellarNetwork>('mainnet');
     const [networkStats, setNetworkStats] = useState<NetworkStats | null>(null);
     const [statsLoading, setStatsLoading] = useState(true);
+    const [contractStatus, setContractStatus] = useState<ContractStatus | null>(null);
 
     useEffect(() => {
         loadTransactions();
         loadNetworkStats();
+        loadContractStatus();
     }, [network]);
 
     useEffect(() => {
@@ -44,6 +54,22 @@ export default function ExpoPage() {
 
         return () => clearInterval(interval);
     }, [autoRefresh, network]);
+
+    const loadContractStatus = async () => {
+        try {
+            const [status, info] = await Promise.all([
+                checkContractStatus(),
+                getContractInfo(),
+            ]);
+
+            setContractStatus({
+                ...status,
+                contractId: info.contractId,
+            });
+        } catch (err) {
+            console.error('Failed to load contract status:', err);
+        }
+    };
 
     const loadNetworkStats = async (silent: boolean = false) => {
         if (!silent) setStatsLoading(true);
@@ -265,6 +291,70 @@ export default function ExpoPage() {
                         )}
                     </div>
                 </div>
+
+                {/* Smart Contract Status Card */}
+                {contractStatus && (
+                    <div className="mb-12 bg-gradient-to-r from-purple-900/20 to-blue-900/20 border border-purple-500/20 rounded-xl p-6">
+                        <div className="flex items-start gap-4">
+                            <div className="w-12 h-12 bg-purple-500/20 rounded-lg flex items-center justify-center shrink-0">
+                                <Code className="text-purple-400" size={24} />
+                            </div>
+                            <div className="flex-1">
+                                <h3 className="text-lg font-bold text-white mb-2">Smart Contract Status</h3>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <p className="text-xs text-gray-400 mb-1">Contract ID</p>
+                                        <p className="text-sm font-mono text-purple-400 break-all">
+                                            {contractStatus.contractId}
+                                        </p>
+                                    </div>
+                                    <div>
+                                        <p className="text-xs text-gray-400 mb-1">Status</p>
+                                        <div className="flex items-center gap-2">
+                                            {contractStatus.isConfigured && contractStatus.isAccessible ? (
+                                                <>
+                                                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                                                    <span className="text-sm text-green-400">Connected</span>
+                                                </>
+                                            ) : contractStatus.isConfigured ? (
+                                                <>
+                                                    <div className="w-2 h-2 bg-yellow-500 rounded-full" />
+                                                    <span className="text-sm text-yellow-400">Configured</span>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <div className="w-2 h-2 bg-red-500 rounded-full" />
+                                                    <span className="text-sm text-red-400">Not Configured</span>
+                                                </>
+                                            )}
+                                        </div>
+                                        {contractStatus.error && (
+                                            <p className="text-xs text-red-400 mt-1">{contractStatus.error}</p>
+                                        )}
+                                    </div>
+                                </div>
+                                <div className="mt-4 flex gap-3">
+                                    <a
+                                        href={`https://stellar.expert/explorer/testnet/contract/${contractStatus.contractId}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-xs text-purple-400 hover:text-purple-300 transition-colors"
+                                    >
+                                        View on Stellar Expert →
+                                    </a>
+                                    <a
+                                        href={`https://lab.stellar.org/r/testnet/contract/${contractStatus.contractId}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-xs text-purple-400 hover:text-purple-300 transition-colors"
+                                    >
+                                        View in Stellar Lab →
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
 
                 { }
                 <div className="flex items-center justify-between mb-6">

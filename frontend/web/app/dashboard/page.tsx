@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Scan, Send, Banknote, TrendingUp, ChevronRight, Gift, Percent, ShieldCheck, FileText, Briefcase, Users, ArrowUpRight, ArrowDownLeft } from 'lucide-react';
 import GlassCard from '@/components/ui/GlassCard';
+import ContractInteraction from '@/components/dashboard/ContractInteraction';
 import Link from 'next/link';
 import {
   QRScannerModal,
@@ -259,7 +260,13 @@ export default function Home() {
         </GlassCard>
       </motion.section>
 
-      {/* 5. Transactions CTA */}
+      {/* 5. Smart Contract Integration */}
+      <motion.section variants={item}>
+        <h2 className="text-sm font-semibold text-gray-400 mb-3 uppercase tracking-wider">Smart Contract</h2>
+        <ContractInteraction />
+      </motion.section>
+
+      {/* 6. Transactions CTA */}
       <motion.section variants={item}>
         <Link href="/transactions">
           <GlassCard className="flex items-center justify-between" hoverEffect>
