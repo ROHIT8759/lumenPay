@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabaseClient';
+import { supabase, isSupabaseConfigured } from '@/lib/supabaseClient';
+import { MOCK_RWA_ASSETS } from '@/lib/mockData';
 
 export interface RWAAsset {
   id: string;
@@ -36,6 +37,35 @@ export async function GET(request: NextRequest) {
     const riskLevel = searchParams.get('risk');
     const minYield = searchParams.get('minYield');
     const kycLevel = searchParams.get('kycLevel');
+
+    if (!isSupabaseConfigured()) {
+      let assets = [...MOCK_RWA_ASSETS];
+
+      if (type) {
+        assets = assets.filter(a => a.asset_type === type);
+      }
+      if (featured === 'true') {
+        assets = assets.filter(a => a.is_featured);
+      }
+      if (riskLevel) {
+        assets = assets.filter(a => a.risk_level === riskLevel);
+      }
+      if (minYield) {
+        const minYieldValue = parseFloat(minYield);
+        assets = assets.filter(a => a.annual_yield_percent >= minYieldValue);
+      }
+      if (kycLevel) {
+        const parsedKyc = parseInt(kycLevel, 10);
+        assets = assets.filter(a => a.min_kyc_level <= parsedKyc);
+      }
+
+      return NextResponse.json({
+        success: true,
+        assets,
+        count: assets.length,
+        demo: true,
+      });
+    }
 
     let query = supabase
       .from('rwa_assets')
@@ -95,6 +125,20 @@ export async function POST(request: NextRequest) {
 
     if (!assetId) {
       return NextResponse.json({ error: 'Asset ID required' }, { status: 400 });
+    }
+
+    if (!isSupabaseConfigured()) {
+      const asset = MOCK_RWA_ASSETS.find(a => a.id === assetId);
+
+      if (!asset) {
+        return NextResponse.json({ error: 'Asset not found' }, { status: 404 });
+      }
+
+      return NextResponse.json({
+        success: true,
+        asset,
+        demo: true,
+      });
     }
 
     const { data, error } = await supabase
