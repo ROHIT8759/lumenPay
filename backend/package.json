@@ -4,11 +4,11 @@
     "description": "LumenPay backend - Non-custodial transaction orchestration",
     "main": "server.ts",
     "scripts": {
-        "dev": "ts-node-dev --respawn --transpile-only server.ts",
+        "dev": "tsx watch server.ts",
         "build": "tsc",
         "start": "node -r dotenv/config dist/server.js",
         "start:indexer": "node -r dotenv/config dist/workers/indexer.js",
-        "indexer": "ts-node-dev --respawn workers/indexer.ts"
+        "indexer": "tsx watch workers/indexer.ts"
     },
     "dependencies": {
         "@prisma/client": "5.10.0",

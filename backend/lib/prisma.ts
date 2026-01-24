@@ -1,12 +1,4 @@
 import { PrismaClient } from '@prisma/client';
-
-/**
- * Prisma Client Singleton
- * 
- * Ensures only one PrismaClient instance is created
- * to avoid connection exhaustion.
- */
-
 declare global {
     var prisma: PrismaClient | undefined;
 }

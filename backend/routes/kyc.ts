@@ -3,18 +3,7 @@ import prisma from '../lib/prisma';
 
 const router = Router();
 
-const DIDIT_API_URL = 'https://api.didit.me/v1'; // Verify actual URL
-import { createClient } from '@supabase/supabase-js';
-import prisma from '../lib/prisma';
-
-const router = Router();
-
-const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
-
-const DIDIT_API_URL = 'https://api.didit.me/v1'; // Verify actual URL
+const DIDIT_API_URL = 'https://api.didit.me/v1';
 const DIDIT_API_KEY = process.env.DIDIT_API_KEY;
 
 /**
@@ -84,24 +73,29 @@ router.get('/status', async (req: Request, res: Response) => {
             return res.status(400).json({ error: 'Missing walletAddress' });
         }
 
-        const { data: session } = await supabase
-            .from('kyc_sessions')
-            .select('*')
-            .eq('wallet_address', walletAddress)
-            .order('created_at', { ascending: false })
-            .limit(1)
-            .single();
+        // Check local DB for user's KYC status
+        const user = await prisma.user.findUnique({
+            where: { walletAddress },
+            select: { kycStatus: true, kycSessionId: true },
+        });
 
-        if (session && (session.status === 'APPROVED' || session.status === 'REJECTED')) {
+        if (!user) {
             return res.json({
                 success: true,
-                status: session.status,
-                confidence_score: session.confidence_score,
+                status: 'NOT_STARTED',
             });
         }
 
-        if (session?.session_id && DIDIT_API_KEY) {
-            const response = await fetch(`${DIDIT_API_URL}/sessions/${session.session_id}/decision`, {
+        if (user.kycStatus === 'APPROVED' || user.kycStatus === 'REJECTED') {
+            return res.json({
+                success: true,
+                status: user.kycStatus,
+            });
+        }
+
+        // If in progress, check DiD iT API for latest status
+        if (user.kycSessionId && DIDIT_API_KEY) {
+            const response = await fetch(`${DIDIT_API_URL}/sessions/${user.kycSessionId}/decision`, {
                 headers: {
                     Authorization: `Bearer ${DIDIT_API_KEY}`,
                 },
@@ -109,29 +103,27 @@ router.get('/status', async (req: Request, res: Response) => {
 
             if (response.ok) {
                 const decision = (await response.json()) as any;
-                const status = decision.decision === 'Accept' ? 'APPROVED' : decision.decision === 'Reject' ? 'REJECTED' : 'PENDING';
+                const newStatus = decision.decision === 'Accept' ? 'APPROVED' :
+                    decision.decision === 'Reject' ? 'REJECTED' : user.kycStatus;
 
-                if (status !== 'PENDING') {
-                    await supabase
-                        .from('kyc_sessions')
-                        .update({
-                            status,
-                            updated_at: new Date().toISOString(),
-                        })
-                        .eq('session_id', session.session_id);
+                // Update DB if status changed to final
+                if (newStatus === 'APPROVED' || newStatus === 'REJECTED') {
+                    await prisma.user.update({
+                        where: { walletAddress },
+                        data: { kycStatus: newStatus },
+                    });
                 }
 
                 return res.json({
                     success: true,
-                    status,
-                    confidence_score: decision.score,
+                    status: newStatus,
                 });
             }
         }
 
         res.json({
             success: true,
-            status: session?.status || 'NOT_STARTED',
+            status: user.kycStatus,
         });
     } catch (error: any) {
         console.error('KYC Status Error:', error);
