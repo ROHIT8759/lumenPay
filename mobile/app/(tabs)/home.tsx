@@ -3,7 +3,15 @@ import { View, Text, ScrollView, TouchableOpacity, RefreshControl } from 'react-
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Bell, ArrowUpRight, ArrowDownLeft, Wallet, Shield } from 'lucide-react-native';
+import { Bell, ArrowUpRight, ArrowDownLeft, Wallet, Shield, LucideProps } from 'lucide-react-native';
+
+const Icons = {
+    Bell: Bell as React.ComponentType<{ color?: string; size?: number }>,
+    ArrowUpRight: ArrowUpRight as React.ComponentType<{ color?: string; size?: number }>,
+    ArrowDownLeft: ArrowDownLeft as React.ComponentType<{ color?: string; size?: number }>,
+    Wallet: Wallet as React.ComponentType<{ color?: string; size?: number }>,
+    Shield: Shield as React.ComponentType<{ color?: string; size?: number }>,
+};
 import { loadWallet, getAccountDetails } from '../../lib/stellar';
 
 export default function HomeScreen() {
@@ -20,12 +28,11 @@ export default function HomeScreen() {
                 setAddress(wallet.publicKey());
                 const details = await getAccountDetails(wallet.publicKey());
                 if (details) {
-
-                    const native = details.balances.find((b: any) => b.asset_type === 'native');
+                    const native = (details.balances as Array<{ asset_type: string; balance: string }>).find(b => b.asset_type === 'native');
                     setBalance(native ? parseFloat(native.balance).toFixed(2) : '0.00');
                 }
             }
-        } catch (e) {
+        } catch (e: unknown) {
             console.error(e);
         } finally {
             setRefreshing(false);
@@ -52,7 +59,8 @@ export default function HomeScreen() {
                         </Text>
                     </View>
                     <TouchableOpacity className="p-3 bg-white/5 rounded-full border border-white/10">
-                        <Bell size={20} color="white" />
+                        {/* @ts-ignore */}
+                        <Icons.Bell size={20} color="white" />
                     </TouchableOpacity>
                 </View>
 
@@ -65,7 +73,7 @@ export default function HomeScreen() {
                         className="rounded-3xl p-6 shadow-lg shadow-accent/20"
                     >
                         <View className="flex-row justify-between items-start mb-8">
-                            <Wallet color="white" size={24} />
+                            <Icons.Wallet color="white" size={24} />
                             <View className="bg-black/20 px-3 py-1 rounded-full">
                                 <Text className="text-white text-xs font-bold">Stellar Testnet</Text>
                             </View>
@@ -91,15 +99,15 @@ export default function HomeScreen() {
                     </LinearGradient>
                 </View>
 
-                {}
+                { }
                 <View className="px-6 mt-8">
                     <Text className="text-white font-bold text-lg mb-4">Quick Actions</Text>
                     <View className="flex-row justify-between">
                         {[
-                            { icon: ArrowUpRight, label: 'Send', color: '#00E5FF', route: '/pay/scan' },
-                            { icon: ArrowDownLeft, label: 'Request', color: '#00C896', route: null },
-                            { icon: Shield, label: 'Verify', color: '#22C55E', route: '/kyc/verify' },
-                            { icon: Wallet, label: 'Top Up', color: '#FF5A5F', route: null },
+                            { icon: Icons.ArrowUpRight, label: 'Send', color: '#00E5FF', route: '/pay/scan' },
+                            { icon: Icons.ArrowDownLeft, label: 'Request', color: '#00C896', route: null },
+                            { icon: Icons.Shield, label: 'Verify', color: '#22C55E', route: '/kyc/verify' },
+                            { icon: Icons.Wallet, label: 'Top Up', color: '#FF5A5F', route: null },
                         ].map((item, i) => (
                             <TouchableOpacity
                                 key={i}
@@ -128,7 +136,7 @@ export default function HomeScreen() {
                         <View className="flex-row items-center justify-between">
                             <View className="flex-row items-center gap-3">
                                 <View className="w-10 h-10 rounded-full bg-red-500/20 items-center justify-center">
-                                    <ArrowUpRight size={18} color="#FF5A5F" />
+                                    <Icons.ArrowUpRight size={18} color="#FF5A5F" />
                                 </View>
                                 <View>
                                     <Text className="text-white font-bold">Starbucks Coffee</Text>
@@ -144,7 +152,7 @@ export default function HomeScreen() {
                         <View className="flex-row items-center justify-between">
                             <View className="flex-row items-center gap-3">
                                 <View className="w-10 h-10 rounded-full bg-green-500/20 items-center justify-center">
-                                    <ArrowDownLeft size={18} color="#00C896" />
+                                    <Icons.ArrowDownLeft size={18} color="#00C896" />
                                 </View>
                                 <View>
                                     <Text className="text-white font-bold">Alice Sent You</Text>

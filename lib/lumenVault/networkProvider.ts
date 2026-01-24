@@ -2,7 +2,7 @@
 
 import {
     Horizon,
-    SorobanRpc,
+    rpc,
     Networks,
 } from '@stellar/stellar-sdk';
 
@@ -31,29 +31,28 @@ export interface TransactionHistoryItem {
 export interface AccountInfo {
     id: string;
     sequence: string;
-    balances: any[];
-    signers: any[];
-    flags: any;
+    balances: Horizon.ServerApi.AccountRecord['balances'];
+    signers: Horizon.ServerApi.AccountRecord['signers'];
+    flags: Horizon.ServerApi.AccountRecord['flags'];
 }
 
 class NetworkProviderService {
     private horizonServer: Horizon.Server;
-    private sorobanServer: SorobanRpc.Server | null = null;
+    private sorobanServer: rpc.Server | null = null;
     private network: NetworkType;
 
     constructor(network: NetworkType = 'testnet') {
         this.network = network;
         this.horizonServer = this.createHorizonServer(network);
 
-        
         if (network === 'testnet') {
-            this.sorobanServer = new SorobanRpc.Server(
+            this.sorobanServer = new rpc.Server(
                 'https://soroban-testnet.stellar.org'
             );
         }
     }
 
-    
+
     private createHorizonServer(network: NetworkType): Horizon.Server {
         const url =
             network === 'testnet'
@@ -63,34 +62,34 @@ class NetworkProviderService {
         return new Horizon.Server(url);
     }
 
-    
+
     switchNetwork(network: NetworkType): void {
         this.network = network;
         this.horizonServer = this.createHorizonServer(network);
 
-        
+
         if (network === 'testnet') {
-            this.sorobanServer = new SorobanRpc.Server(
+            this.sorobanServer = new rpc.Server(
                 'https://soroban-testnet.stellar.org'
             );
         } else {
-            this.sorobanServer = new SorobanRpc.Server(
+            this.sorobanServer = new rpc.Server(
                 'https://soroban-mainnet.stellar.org'
             );
         }
     }
 
-    
+
     getHorizonServer(): Horizon.Server {
         return this.horizonServer;
     }
 
-    
-    getSorobanServer(): SorobanRpc.Server | null {
+
+    getSorobanServer(): rpc.Server | null {
         return this.sorobanServer;
     }
 
-    
+
     async submitTransaction(signedXDR: string): Promise<{
         hash: string;
         ledger?: number;
@@ -105,15 +104,16 @@ class NetworkProviderService {
                 hash: result.hash,
                 ledger: result.ledger,
             };
-        } catch (error: any) {
+        } catch (error: unknown) {
+            const horizonError = error as { response?: { data?: { extras?: { result_codes?: { transaction?: string } } } }; message?: string };
             return {
                 hash: '',
-                error: error.response?.data?.extras?.result_codes?.transaction || error.message,
+                error: horizonError.response?.data?.extras?.result_codes?.transaction || horizonError.message || 'Failed to submit transaction',
             };
         }
     }
 
-    
+
     async getBalances(publicKey: string): Promise<{
         balances: BalanceInfo;
         error?: string;
@@ -139,7 +139,7 @@ class NetworkProviderService {
                         balance: balance.balance,
                     };
 
-                    
+
                     if (balance.asset_code === 'USDC') {
                         usdcBalance = balance.balance;
                     }
@@ -155,19 +155,19 @@ class NetworkProviderService {
                     assets,
                 },
             };
-        } catch (error: any) {
+        } catch (error: unknown) {
             return {
                 balances: {
                     native: '0',
                     usdc: '0',
                     assets: [],
                 },
-                error: error.message || 'Failed to fetch balances',
+                error: error instanceof Error ? error.message : 'Failed to fetch balances',
             };
         }
     }
 
-    
+
     async getTransactionHistory(
         publicKey: string,
         limit: number = 20
@@ -194,15 +194,15 @@ class NetworkProviderService {
             }));
 
             return { transactions };
-        } catch (error: any) {
+        } catch (error: unknown) {
             return {
                 transactions: [],
-                error: error.message || 'Failed to fetch transaction history',
+                error: error instanceof Error ? error.message : 'Failed to fetch transaction history',
             };
         }
     }
 
-    
+
     async getAccountInfo(publicKey: string): Promise<{
         account: AccountInfo | null;
         error?: string;
@@ -227,7 +227,7 @@ class NetworkProviderService {
         }
     }
 
-    
+
     async accountExists(publicKey: string): Promise<boolean> {
         try {
             await this.horizonServer.loadAccount(publicKey);
@@ -237,7 +237,7 @@ class NetworkProviderService {
         }
     }
 
-    
+
     async fundTestnetAccount(publicKey: string): Promise<{
         success: boolean;
         error?: string;
@@ -267,7 +267,7 @@ class NetworkProviderService {
         }
     }
 
-    
+
     async pollTransactionStatus(
         hash: string,
         timeout: number = 30000
@@ -286,13 +286,13 @@ class NetworkProviderService {
 
                 return { successful: tx.successful };
             } catch (error: any) {
-                
+
                 if (error.response?.status === 404) {
                     await new Promise((resolve) => setTimeout(resolve, 1000));
                     continue;
                 }
 
-                
+
                 return {
                     successful: false,
                     error: error.message,
@@ -306,12 +306,12 @@ class NetworkProviderService {
         };
     }
 
-    
+
     getCurrentNetwork(): NetworkType {
         return this.network;
     }
 
-    
+
     getNetworkPassphrase(): string {
         return this.network === 'testnet'
             ? Networks.TESTNET

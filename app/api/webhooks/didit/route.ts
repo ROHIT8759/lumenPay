@@ -7,6 +7,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { diditService, DiditWebhookPayload } from '@/lib/diditService';
+import { notifyKYCStatusUpdate } from '@/lib/telegramService';
 
 
 
@@ -69,8 +70,17 @@ export async function POST(request: NextRequest) {
             );
         }
 
+        if (payload.vendor_data) {
+            try {
+                const vendor = JSON.parse(payload.vendor_data);
+                const walletAddress = vendor.user_id || '';
+                if (walletAddress) {
+                    await notifyKYCStatusUpdate(walletAddress, payload.status.toUpperCase());
+                }
+            } catch {}
+        }
+
         
-        return NextResponse.json({ success: true });
 
     } catch (error: unknown) {
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';

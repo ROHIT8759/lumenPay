@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabaseClient';
-import { createInternalWallet } from '@/app/actions/wallet';
 import { isConnected, getAddress, requestAccess } from "@stellar/freighter-api";
+import { walletAuth } from '@/lib/lumenVault/walletAuth';
 
-export type WalletType = 'internal' | 'freighter' | null;
+export type WalletType = 'lumenvault' | 'freighter' | 'internal' | null;
 
 export function useWallet() {
     const [address, setAddress] = useState<string | null>(null);
@@ -12,9 +12,10 @@ export function useWallet() {
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        
         const savedType = localStorage.getItem('walletType') as WalletType;
-        if (savedType === 'freighter') {
+        if (savedType === 'lumenvault') {
+            checkLumenVault();
+        } else if (savedType === 'freighter') {
             checkFreighter();
         } else if (savedType === 'internal') {
             fetchInternalWallet();
@@ -23,7 +24,53 @@ export function useWallet() {
         }
     }, []);
 
-    
+    const checkLumenVault = async () => {
+        try {
+            const session = walletAuth.getSession();
+            if (session) {
+                setAddress(session.address);
+                setWalletType('lumenvault');
+            } else {
+                localStorage.removeItem('walletType');
+            }
+        } catch (e) {
+            console.error("LumenVault check failed", e);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const connectLumenVault = async (passphrase: string) => {
+        setLoading(true);
+        setError(null);
+        try {
+            const stored = localStorage.getItem('lumenvault_wallet');
+            if (!stored) {
+                setError("No wallet found. Please import from mobile.");
+                return false;
+            }
+
+            const walletData = JSON.parse(stored);
+            const result = await walletAuth.signIn(walletData, passphrase);
+
+            if (result.success && result.session) {
+                setAddress(result.session.address);
+                setWalletType('lumenvault');
+                localStorage.setItem('walletType', 'lumenvault');
+                return true;
+            } else {
+                setError(result.error || "Authentication failed");
+                return false;
+            }
+        } catch (e: unknown) {
+            setError(e instanceof Error ? e.message : "Connection failed");
+            return false;
+        } finally {
+            setLoading(false);
+        }
+    };
+
+
     const checkFreighter = async () => {
         try {
             const connected = await isConnected();
@@ -49,7 +96,7 @@ export function useWallet() {
         try {
             const checkConnection = async () => {
                 const timeout = new Promise<{ isConnected: boolean }>((resolve) => setTimeout(() => resolve({ isConnected: false }), 2000));
-                
+
                 const connection = isConnected();
                 return Promise.race([connection, timeout]);
             };
@@ -57,7 +104,7 @@ export function useWallet() {
             const connected = await checkConnection();
 
             if (!connected.isConnected) {
-                
+
                 setError("Freighter not detected. Please install it.");
                 return false;
             }
@@ -70,15 +117,15 @@ export function useWallet() {
             setWalletType('freighter');
             localStorage.setItem('walletType', 'freighter');
             return true;
-        } catch (e: any) {
-            setError(e.message || "Failed to connect Freighter");
+        } catch (e: unknown) {
+            setError(e instanceof Error ? e.message : "Failed to connect Freighter");
             return false;
         } finally {
             setLoading(false);
         }
     };
 
-    
+
     const fetchInternalWallet = async () => {
         try {
             setLoading(true);
@@ -108,8 +155,8 @@ export function useWallet() {
         return false;
     };
 
-    
-    
+
+
     const syncInternal = async () => {
         return await fetchInternalWallet();
     }
@@ -127,6 +174,7 @@ export function useWallet() {
         loading,
         error,
         connectFreighter,
+        connectLumenVault,
         syncInternal,
         disconnect
     };

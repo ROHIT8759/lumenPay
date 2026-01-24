@@ -1,14 +1,13 @@
 import { createClient } from "@supabase/supabase-js";
 import { NextRequest, NextResponse } from "next/server";
-import { Keypair, TransactionBuilder, Networks, Operation, Asset, Horizon } from "@stellar/stellar-sdk";
-import crypto from "crypto";
+import { Networks, Horizon } from "@stellar/stellar-sdk";
+import { walletService } from "./walletService";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-const ENCRYPTION_KEY = process.env.WALLET_ENCRYPTION_KEY!;
 const NETWORK_PASSPHRASE = Networks.TESTNET;
 const SERVER_URL = "https://horizon-testnet.stellar.org";
 const server = new Horizon.Server(SERVER_URL);
@@ -17,23 +16,7 @@ const server = new Horizon.Server(SERVER_URL);
 
 
 
-function decryptKey(encrypted: string, iv: string): string {
-  const authTag = Buffer.from(encrypted.slice(-32), "hex");
-  const encryptedData = encrypted.slice(0, -32);
-
-  const decipher = crypto.createDecipheriv(
-    "aes-256-gcm",
-    Buffer.from(ENCRYPTION_KEY, "hex"),
-    Buffer.from(iv, "hex")
-  );
-
-  decipher.setAuthTag(authTag);
-
-  let decrypted = decipher.update(encryptedData, "hex", "utf8");
-  decrypted += decipher.final("utf8");
-
-  return decrypted;
-}
+// Custodial key decryption removed. All signing happens client-side via LumenVault.
 
 
 
@@ -126,7 +109,7 @@ export async function handleScanQR(request: NextRequest) {
 
     if (action === "confirm") {
 
-      const { qrScanId, recipientAddress, amountXLM } = body;
+      const { qrScanId, recipientAddress, amountXLM, signedXdr } = body;
 
       if (!recipientAddress || !amountXLM) {
         return NextResponse.json(
@@ -136,47 +119,21 @@ export async function handleScanQR(request: NextRequest) {
       }
 
 
-      const { data: wallet, error: walletError } = await supabase
-        .from("wallets")
-        .select("*")
-        .eq("user_id", user.id)
-        .single();
-
-      if (walletError || !wallet) {
+      if (!signedXdr) {
         return NextResponse.json(
-          { error: "Wallet not found" },
-          { status: 404 }
+          { error: "Missing signedXdr" },
+          { status: 400 }
         );
       }
 
       try {
-
-        const secretKey = decryptKey(wallet.encrypted_secret_key, wallet.encryption_iv);
-        const keyPair = Keypair.fromSecret(secretKey);
-
-
-        const sourceAccount = await server.loadAccount(wallet.public_key);
-        const txBuilder = new TransactionBuilder(sourceAccount, {
-          fee: "100",
-          networkPassphrase: NETWORK_PASSPHRASE,
-        });
-
-        const tx = txBuilder
-          .addOperation(
-            Operation.payment({
-              destination: recipientAddress,
-              asset: Asset.native(),
-              amount: amountXLM.toString(),
-            })
-          )
-          .setTimeout(180)
-          .build();
-
-        tx.sign(keyPair);
-        const xdr = tx.toEnvelope().toXDR("base64");
-
-
-        const txResult = await server.submitTransaction(tx);
+        const submit = await walletService.submitSignedTransaction(signedXdr);
+        if (!submit.success) {
+          return NextResponse.json(
+            { error: submit.error || "Submission failed" },
+            { status: 400 }
+          );
+        }
 
 
         const { data: transaction } = await supabase
@@ -188,7 +145,7 @@ export async function handleScanQR(request: NextRequest) {
             amount: Math.floor(parseFloat(amountXLM) * 10000000),
             asset_code: "XLM",
             status: "confirmed",
-            stellar_tx_hash: txResult.hash,
+            stellar_tx_hash: submit.txHash,
             type: "payment",
             memo: `QR Payment via LumenPay`,
           })
@@ -201,14 +158,14 @@ export async function handleScanQR(request: NextRequest) {
             .from("qr_scans")
             .update({
               status: "transaction_completed",
-              stellar_tx_hash: txResult.hash,
+              stellar_tx_hash: submit.txHash,
             })
             .eq("id", qrScanId);
         }
 
         return NextResponse.json({
           success: true,
-          txHash: txResult.hash,
+          txHash: submit.txHash,
           transaction,
         });
       } catch (error: any) {
@@ -294,7 +251,7 @@ export async function handlePayId(request: NextRequest) {
 
     if (action === "send") {
 
-      const { recipientAddress, amountXLM } = body;
+      const { recipientAddress, amountXLM, signedXdr } = body;
 
       if (!recipientAddress || !amountXLM) {
         return NextResponse.json(
@@ -304,59 +261,36 @@ export async function handlePayId(request: NextRequest) {
       }
 
 
-      const { data: wallet } = await supabase
-        .from("wallets")
-        .select("*")
-        .eq("user_id", user.id)
-        .single();
-
-      if (!wallet) {
+      if (!signedXdr) {
         return NextResponse.json(
-          { error: "Wallet not found" },
-          { status: 404 }
+          { error: "Missing signedXdr" },
+          { status: 400 }
         );
       }
 
       try {
-        const secretKey = decryptKey(wallet.encrypted_secret_key, wallet.encryption_iv);
-        const keyPair = Keypair.fromSecret(secretKey);
-        const sourceAccount = await server.loadAccount(wallet.public_key);
-
-        const txBuilder = new TransactionBuilder(sourceAccount, {
-          fee: "100",
-          networkPassphrase: NETWORK_PASSPHRASE,
-        });
-
-        const tx = txBuilder
-          .addOperation(
-            Operation.payment({
-              destination: recipientAddress,
-              asset: Asset.native(),
-              amount: amountXLM.toString(),
-            })
-          )
-          .setTimeout(180)
-          .build();
-
-        tx.sign(keyPair);
-        const txResult = await server.submitTransaction(tx);
-
+        const submit = await walletService.submitSignedTransaction(signedXdr);
+        if (!submit.success) {
+          return NextResponse.json(
+            { error: submit.error || "Submission failed" },
+            { status: 400 }
+          );
+        }
 
         await supabase.from("transactions").insert({
           user_id: user.id,
-          from_address: wallet.public_key,
           to_address: recipientAddress,
           amount: Math.floor(parseFloat(amountXLM) * 10000000),
           asset_code: "XLM",
           status: "confirmed",
-          stellar_tx_hash: txResult.hash,
+          stellar_tx_hash: submit.txHash,
           type: "payment",
           memo: `Pay ID Transfer`,
         });
 
         return NextResponse.json({
           success: true,
-          txHash: txResult.hash,
+          txHash: submit.txHash,
         });
       } catch (error: any) {
         return NextResponse.json(

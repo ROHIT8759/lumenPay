@@ -5,14 +5,10 @@ import {
     createWalletData,
     getKeypairFromWallet,
     WalletData,
-    encryptSecret,
-    decryptSecret,
-    EncryptedKey,
 } from '@/lib/lumenVault/keyManager';
-import { secureStorage } from '@/lib/lumenVault/secureStorage';
 import { signingEngine } from '@/lib/lumenVault/signingEngine';
 import { walletAuth, AuthSession } from '@/lib/lumenVault/walletAuth';
-import { NETWORK, API } from '@/lib/config';
+import { NETWORK } from '@/lib/config';
 
 export interface LumenVaultState {
     // Wallet state
@@ -128,11 +124,11 @@ export function useLumenVault(): [LumenVaultState, LumenVaultActions] {
             }));
 
             return { publicKey: data.publicKey };
-        } catch (error: any) {
+        } catch (error: unknown) {
             setState(prev => ({
                 ...prev,
                 isCreating: false,
-                error: error.message || 'Failed to create wallet',
+                error: error instanceof Error ? error.message : 'Failed to create wallet',
             }));
             return null;
         }
@@ -164,11 +160,11 @@ export function useLumenVault(): [LumenVaultState, LumenVaultActions] {
             }));
 
             return { publicKey: data.publicKey };
-        } catch (error: any) {
+        } catch (error: unknown) {
             setState(prev => ({
                 ...prev,
                 isCreating: false,
-                error: error.message || 'Failed to import wallet',
+                error: error instanceof Error ? error.message : 'Failed to import wallet',
             }));
             return null;
         }
@@ -186,7 +182,7 @@ export function useLumenVault(): [LumenVaultState, LumenVaultActions] {
 
             setState(prev => ({ ...prev, isLocked: false, error: null }));
             return true;
-        } catch (error: any) {
+        } catch (_error: unknown) {
             setState(prev => ({
                 ...prev,
                 error: 'Invalid passphrase',
@@ -240,11 +236,11 @@ export function useLumenVault(): [LumenVaultState, LumenVaultActions] {
             }));
 
             return true;
-        } catch (error: any) {
+        } catch (error: unknown) {
             setState(prev => ({
                 ...prev,
                 isAuthenticating: false,
-                error: error.message || 'Authentication failed',
+                error: error instanceof Error ? error.message : 'Authentication failed',
             }));
             return false;
         }
@@ -289,11 +285,11 @@ export function useLumenVault(): [LumenVaultState, LumenVaultActions] {
                 signedXdr: result.signedTransaction.signedXDR,
                 hash: result.signedTransaction.hash,
             };
-        } catch (error: any) {
+        } catch (error: unknown) {
             setState(prev => ({
                 ...prev,
                 isSigning: false,
-                error: error.message || 'Failed to sign transaction',
+                error: error instanceof Error ? error.message : 'Failed to sign transaction',
             }));
             return null;
         }

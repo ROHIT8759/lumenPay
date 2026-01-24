@@ -24,7 +24,7 @@ export interface Transaction {
     error_message: string | null;
     fee: number;
     related_feature: string | null;
-    meta_data: any;
+    meta_data: Record<string, unknown> | null;
     created_at: string;
     confirmed_at: string | null;
 }
@@ -116,7 +116,7 @@ export default function TransactionDetail({ transaction, onClose }: TransactionD
                     exit={{ opacity: 0, scale: 0.95, y: 20 }}
                     className="relative bg-[#111] border border-white/10 rounded-2xl max-w-2xl w-full my-8 z-10"
                 >
-                    {}
+                    { }
                     <div className="flex items-center justify-between p-6 border-b border-white/10">
                         <div className="flex items-center gap-3">
                             {getStatusIcon()}
@@ -133,9 +133,9 @@ export default function TransactionDetail({ transaction, onClose }: TransactionD
                         </button>
                     </div>
 
-                    {}
+                    { }
                     <div className="p-6 space-y-6">
-                        {}
+                        { }
                         <div className="text-center py-6 bg-white/5 rounded-xl border border-white/10">
                             <div className="flex items-center justify-center gap-2 mb-2">
                                 {getDirectionIcon()}
@@ -149,7 +149,7 @@ export default function TransactionDetail({ transaction, onClose }: TransactionD
                             </p>
                         </div>
 
-                        {}
+                        { }
                         <DetailRow
                             label={transaction.tx_direction === 'sent' ? 'To' : 'From'}
                             value={
@@ -167,7 +167,7 @@ export default function TransactionDetail({ transaction, onClose }: TransactionD
                             copied={copied === 'address'}
                         />
 
-                        {}
+                        { }
                         {transaction.pay_id_used && (
                             <DetailRow
                                 label="Pay ID"
@@ -178,7 +178,7 @@ export default function TransactionDetail({ transaction, onClose }: TransactionD
                             />
                         )}
 
-                        {}
+                        { }
                         {transaction.tx_hash && (
                             <DetailRow
                                 label="Transaction Hash"
@@ -193,7 +193,7 @@ export default function TransactionDetail({ transaction, onClose }: TransactionD
                             />
                         )}
 
-                        {}
+                        { }
                         {(transaction.reference || transaction.memo) && (
                             <DetailRow
                                 label="Reference"
@@ -201,7 +201,7 @@ export default function TransactionDetail({ transaction, onClose }: TransactionD
                             />
                         )}
 
-                        {}
+                        { }
                         {transaction.related_feature && (
                             <DetailRow
                                 label="Category"
@@ -213,7 +213,7 @@ export default function TransactionDetail({ transaction, onClose }: TransactionD
                             />
                         )}
 
-                        {}
+                        { }
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <DetailRow label="Created" value={formatDate(transaction.created_at)} />
                             {transaction.confirmed_at && (
@@ -221,7 +221,7 @@ export default function TransactionDetail({ transaction, onClose }: TransactionD
                             )}
                         </div>
 
-                        {}
+                        { }
                         {transaction.error_message && (
                             <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-lg">
                                 <p className="text-sm text-red-400">
@@ -231,7 +231,7 @@ export default function TransactionDetail({ transaction, onClose }: TransactionD
                             </div>
                         )}
 
-                        {}
+                        { }
                         <DetailRow
                             label="Transaction ID"
                             value={<code className="text-xs text-gray-500 font-mono">{transaction.id}</code>}
@@ -240,7 +240,7 @@ export default function TransactionDetail({ transaction, onClose }: TransactionD
                             copied={copied === 'id'}
                         />
 
-                        {}
+                        { }
                         {transaction.tx_hash && (
                             <a
                                 href={`https://stellar.expert/explorer/public/tx/${transaction.tx_hash}`}

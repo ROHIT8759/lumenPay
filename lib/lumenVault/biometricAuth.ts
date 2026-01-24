@@ -11,19 +11,24 @@ export type BiometricType =
     | 'none';
 
 
-let LocalAuthentication: any = null;
+// We use a type-safe way to load expo-local-authentication
+let LocalAuthentication: typeof import('expo-local-authentication') | null = null;
 
-
-if (typeof window !== 'undefined' && (window as any).expo) {
-    try {
-        LocalAuthentication = require('expo-local-authentication');
-    } catch {
-        
+async function loadLocalAuth() {
+    if (typeof window !== 'undefined' && (window as { expo?: unknown }).expo) {
+        try {
+            LocalAuthentication = await import('expo-local-authentication');
+        } catch {
+            // Module not available
+        }
     }
 }
 
+// Trigger initial load
+loadLocalAuth();
+
 class BiometricAuthService {
-    
+
     async isAvailable(): Promise<{
         available: boolean;
         biometricType: BiometricType;
@@ -54,7 +59,7 @@ class BiometricAuthService {
 
             const types = await LocalAuthentication.supportedAuthenticationTypesAsync();
 
-            
+
             let biometricType: BiometricType = 'fingerprint';
             if (types.includes(LocalAuthentication.AuthenticationType.FACIAL_RECOGNITION)) {
                 biometricType = 'face';
@@ -75,7 +80,7 @@ class BiometricAuthService {
         }
     }
 
-    
+
     async authenticate(reason: string = 'Unlock your wallet'): Promise<{
         success: boolean;
         error?: string;
@@ -98,20 +103,20 @@ class BiometricAuthService {
                 success: result.success,
                 error: result.error,
             };
-        } catch (error: any) {
+        } catch (error: unknown) {
             return {
                 success: false,
-                error: error.message || 'Authentication failed',
+                error: error instanceof Error ? error.message : 'Authentication failed',
             };
         }
     }
 
-    
+
     async enableBiometric(): Promise<{
         success: boolean;
         error?: string;
     }> {
-        
+
         const { available } = await this.isAvailable();
         if (!available) {
             return {
@@ -120,24 +125,24 @@ class BiometricAuthService {
             };
         }
 
-        
+
         const authResult = await this.authenticate('Enable biometric unlock');
         if (!authResult.success) {
             return authResult;
         }
 
-        
+
         await mobileStorage.setBiometricEnabled(true);
 
         return { success: true };
     }
 
-    
+
     async disableBiometric(): Promise<void> {
         await mobileStorage.setBiometricEnabled(false);
     }
 
-    
+
     async isEnabled(): Promise<boolean> {
         return await mobileStorage.isBiometricEnabled();
     }
@@ -146,26 +151,26 @@ class BiometricAuthService {
 class PINAuthService {
     private readonly PIN_LENGTH = 6;
 
-    
+
     private hashPIN(pin: string): string {
-        
+
         if (typeof window !== 'undefined' && !createHash) {
-            
+
             return btoa(pin + '_salt_lumenvault');
         }
 
-        
+
         return createHash('sha256')
             .update(pin + '_salt_lumenvault')
             .digest('hex');
     }
 
-    
+
     async setupPIN(pin: string): Promise<{
         success: boolean;
         error?: string;
     }> {
-        
+
         if (pin.length !== this.PIN_LENGTH) {
             return {
                 success: false,
@@ -180,14 +185,14 @@ class PINAuthService {
             };
         }
 
-        
+
         const hash = this.hashPIN(pin);
         await mobileStorage.storePINHash(hash);
 
         return { success: true };
     }
 
-    
+
     async verifyPIN(pin: string): Promise<{
         success: boolean;
         error?: string;
@@ -213,18 +218,18 @@ class PINAuthService {
         }
     }
 
-    
+
     async hasPIN(): Promise<boolean> {
         const hash = await mobileStorage.getPINHash();
         return !!hash;
     }
 
-    
+
     async changePIN(oldPIN: string, newPIN: string): Promise<{
         success: boolean;
         error?: string;
     }> {
-        
+
         const verifyResult = await this.verifyPIN(oldPIN);
         if (!verifyResult.success) {
             return {
@@ -233,22 +238,22 @@ class PINAuthService {
             };
         }
 
-        
+
         return await this.setupPIN(newPIN);
     }
 
-    
+
     async removePIN(pin: string): Promise<{
         success: boolean;
         error?: string;
     }> {
-        
+
         const verifyResult = await this.verifyPIN(pin);
         if (!verifyResult.success) {
             return verifyResult;
         }
 
-        
+
         await mobileStorage.storePINHash('');
 
         return { success: true };

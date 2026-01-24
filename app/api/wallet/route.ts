@@ -3,6 +3,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { walletService } from '@/lib/walletService';
 import { supabase } from '@/lib/supabaseClient';
+import { jwtVerify } from 'jose';
 
 export async function GET(req: NextRequest) {
   try {
@@ -10,19 +11,26 @@ export async function GET(req: NextRequest) {
     const action = searchParams.get('action');
 
     
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session?.user) {
+    const authHeader = req.headers.get('authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-
-    const userId = session.user.id;
+    const token = authHeader.substring(7);
+    const secret = new TextEncoder().encode(process.env.JWT_SECRET || 'lumenpay-jwt-secret-change-in-production');
+    let userAddress: string;
+    try {
+      const { payload } = await jwtVerify(token, secret);
+      userAddress = payload.address as string;
+    } catch {
+      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
+    }
 
     if (action === 'info') {
-      return await getWalletInfo(userId);
+      return await getWalletInfo(userAddress);
     } else if (action === 'balance') {
-      return await getWalletBalance(userId);
+      return await getWalletBalance(userAddress);
     } else if (action === 'transactions') {
-      return await getTransactions(userId);
+      return await getTransactions(userAddress);
     } else {
       return NextResponse.json(
         { error: 'Unknown action' },

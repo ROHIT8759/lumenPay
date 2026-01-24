@@ -1,7 +1,6 @@
 
 
 import { NextRequest, NextResponse } from 'next/server';
-import { walletService } from '@/lib/walletService';
 import { supabase } from '@/lib/supabaseClient';
 
 export async function POST(req: NextRequest) {
@@ -69,24 +68,11 @@ async function handleSignup(data: any) {
       return NextResponse.json({ error: profileError.message }, { status: 500 });
     }
 
-    
-    const walletResult = await walletService.createWallet(userId);
-    if (walletResult.error) {
-      return NextResponse.json({ error: walletResult.error }, { status: 500 });
-    }
-
-    
-    const fundResult = await walletService.createStellarAccount(walletResult.publicKey);
-    if (!fundResult.success) {
-      console.warn('Stellar account creation failed, retrying later:', fundResult.error);
-      
-    }
-
     return NextResponse.json({
       success: true,
       userId,
-      publicKey: walletResult.publicKey,
-      message: 'Signup successful. Wallet created.'
+      publicKey: null,
+      message: 'Signup successful. Link your wallet to continue.'
     });
   } catch (error: any) {
     console.error('Signup error:', error);

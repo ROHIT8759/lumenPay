@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { walletService } from '@/lib/walletService';
 import { jwtVerify } from 'jose';
 import { supabase } from '@/lib/supabaseClient';
+import { notifyPaymentSent, notifyTransactionFailed } from '@/lib/telegramService';
 
 const JWT_SECRET = new TextEncoder().encode(
     process.env.JWT_SECRET || 'lumenpay-jwt-secret-change-in-production'
@@ -49,6 +50,7 @@ export async function POST(request: NextRequest) {
         const result = await walletService.submitSignedTransaction(signedXdr);
 
         if (!result.success) {
+            await notifyTransactionFailed(userAddress, result.error || 'Unknown error');
             return NextResponse.json(
                 { error: result.error },
                 { status: 400 }
@@ -69,6 +71,8 @@ export async function POST(request: NextRequest) {
             console.warn('Failed to record transaction:', dbError);
             // Don't fail the request if DB write fails
         }
+
+        await notifyPaymentSent(userAddress, 'N/A', 'XLM', 'N/A', result.txHash);
 
         return NextResponse.json({
             success: true,

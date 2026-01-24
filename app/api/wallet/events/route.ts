@@ -3,6 +3,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { jwtVerify } from 'jose';
+import { notifyEscrowCreated, notifyEscrowSettled } from '@/lib/telegramService';
 
 const JWT_SECRET = new TextEncoder().encode(
     process.env.WALLET_JWT_SECRET || 'lumenvault-dev-secret-key-change-in-prod'
@@ -69,6 +70,9 @@ export async function POST(request: NextRequest) {
                     meta_data: { ...data, blockchain_event_id: newEvent.id },
                 })
                 .eq('id', data.paymentId);
+            if (data?.borrower && data?.amount && data?.asset) {
+                await notifyEscrowCreated(data.borrower, String(data.amount), String(data.asset), String(data.recipient || ''), String(txHash));
+            }
         }
 
         if (eventType === 'PaymentSettled' && data?.paymentId) {
@@ -76,6 +80,9 @@ export async function POST(request: NextRequest) {
                 .from('transactions')
                 .update({ status: 'settled' })
                 .eq('id', data.paymentId);
+            if (data?.borrower) {
+                await notifyEscrowSettled(data.borrower, String(txHash));
+            }
         }
 
         return NextResponse.json({

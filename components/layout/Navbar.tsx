@@ -25,14 +25,14 @@ export default function Navbar() {
     };
 
     const navItems = [
-        { label: 'Home', href: '/dashboard', icon: Home }, 
+        { label: 'Home', href: '/dashboard', icon: Home },
         { label: 'People', href: '/people', icon: Users },
         { label: 'Services', href: '/services', icon: Briefcase },
         { label: 'Offers', href: '/offers', icon: Gift },
         { label: 'Transactions', href: '/transactions', icon: FileText },
     ];
 
-    
+
     if (pathname === '/') return null;
 
     return (
@@ -69,15 +69,7 @@ export default function Navbar() {
                     <button
                         onClick={() => {
                             if (!address) {
-                                setIsQROpen(true); 
-                                
-                                
-                                
-                                
-                                
-                                
-                                
-                                setIsQROpen(true);
+                                router.push('/wallet/sync');
                             } else {
                                 setIsProfileOpen(!isProfileOpen);
                             }
@@ -95,7 +87,7 @@ export default function Navbar() {
                         </div>
                     </button>
 
-                    {}
+                    { }
                     <AnimatePresence>
                         {isProfileOpen && address && (
                             <>

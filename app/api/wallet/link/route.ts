@@ -58,34 +58,31 @@ export async function POST(request: NextRequest) {
                 .from('wallets')
                 .update({
                     public_key: walletAddress,
-                    wallet_type: 'non_custodial',
-                    is_external: true,
-                    encrypted_secret: null,
-                    encryption_iv: null,
+                    wallet_type: 'non-custodial',
+                    is_primary: true,
                     updated_at: new Date().toISOString(),
                 })
                 .eq('user_id', userId);
-
+            
             if (error) throw error;
         } else {
             const { error } = await supabase.from('wallets').insert({
                 user_id: userId,
                 public_key: walletAddress,
-                wallet_type: 'non_custodial',
-                is_external: true,
-                encrypted_secret: null,
-                encryption_iv: null,
+                wallet_type: 'non-custodial',
+                is_primary: true,
+                network: 'testnet',
             });
-
+            
             if (error) throw error;
         }
 
         await supabase
             .from('profiles')
             .update({
-                wallet_address: walletAddress,
+                display_name: `Wallet ${walletAddress.substring(0, 6)}`,
             })
-            .eq('user_id', userId);
+            .eq('id', userId);
 
         return NextResponse.json({
             success: true,

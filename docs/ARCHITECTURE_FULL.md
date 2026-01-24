@@ -1,8 +1,8 @@
-# 🏗️ StellarPay - Complete Production Architecture
+# 🏗️ LumenPay - Complete Production Architecture
 
 ## Overview
 
-StellarPay is a **real fintech payment system** built on Stellar blockchain with an **internal custodial wallet** (NOT external browser wallets). It feels like UPI/PayTM but powered by Stellar.
+LumenPay is a **real fintech payment system** built on Stellar blockchain with an **internal custodial wallet** (NOT external browser wallets). It feels like UPI/PayTM but powered by Stellar.
 
 ---
 

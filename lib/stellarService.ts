@@ -1,24 +1,12 @@
 import { createClient } from "@supabase/supabase-js";
-import { Keypair, Account, TransactionBuilder, Networks, Operation, Asset, Memo, Horizon } from "@stellar/stellar-sdk";
-import crypto from "crypto";
+import { TransactionBuilder, Networks, Operation, Asset, Memo, Horizon } from "@stellar/stellar-sdk";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-const ENCRYPTION_KEY = process.env.WALLET_ENCRYPTION_KEY!;
-const NETWORK_PASSPHRASE = Networks.TESTNET;
-
-
-
-
-
-
-// -- CUSTODIAL KEY MANAGEMENT REMOVED --
-// The backend no longer stores or manages private keys.
-// All signing must happen on the client side (LumenVault).
-
+const NETWORK_PASSPHRASE = Networks.TESTNET;.
 export async function registerUserWallet(userId: string, publicKey: string) {
   try {
     const { data: profile } = await supabase
@@ -29,22 +17,18 @@ export async function registerUserWallet(userId: string, publicKey: string) {
 
     let payId = "";
     if (profile?.email) {
-      payId = `${profile.email.split("@")[0]}.${userId.slice(0, 8)}@steller`;
+      payId = `${profile.email.split("@")[0]}.${userId.slice(0, 8)}@lumenpay`;
     } else {
-      // Fallback if no email (shouldn't happen for email auth, but good for safety)
-      payId = `user.${userId.slice(0, 8)}@steller`;
+      payId = `user.${userId.slice(0, 8)}@lumenpay`;
     }
 
     const { error } = await supabase.from("wallets").insert({
       user_id: userId,
       public_key: publicKey,
-      // encrypted_secret_key: null, // intentionally omitted
-      // encryption_iv: null,        // intentionally omitted
       network: "testnet",
     });
 
     if (error) {
-      // Ignore duplicate key error if user already registered same wallet
       if (error.code !== '23505') throw error;
     }
 
@@ -93,7 +77,7 @@ export async function getBalance(publicKey: string): Promise<string> {
     );
 
     const account = await server.loadAccount(publicKey);
-    const xlmBalance = account.balances.find((bal: any) => bal.asset_type === "native");
+    const xlmBalance = account.balances.find((bal) => bal.asset_type === "native");
     return xlmBalance ? xlmBalance.balance : "0";
   } catch (error) {
     console.error("Failed to get balance:", error);
@@ -177,9 +161,10 @@ export async function submitSignedTransaction(
     const result = await server.submitTransaction(transaction);
 
     return { hash: result.hash };
-  } catch (error: any) {
+  } catch (error: unknown) {
     // Better error error handling for Horizon errors
-    const errorMessage = error.response?.data?.extras?.result_codes?.operations?.join(', ') || error.message;
+    const horizonError = error as { response?: { data?: { extras?: { result_codes?: { operations?: string[] } } } }; message?: string };
+    const errorMessage = horizonError.response?.data?.extras?.result_codes?.operations?.join(', ') || horizonError.message || "Unknown error";
     console.error("Failed to submit transaction:", errorMessage);
     return { hash: "", error: errorMessage };
   }

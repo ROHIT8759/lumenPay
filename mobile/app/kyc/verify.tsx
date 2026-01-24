@@ -22,7 +22,7 @@ import { diditKYC, KYCStatusResponse } from '../../lib/diditKyc';
 
 
 const getWalletAddress = (): string => {
-    
+
     return 'GXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX';
 };
 
@@ -36,12 +36,7 @@ export default function KYCVerifyScreen() {
 
     const walletAddress = getWalletAddress();
 
-    
-    useEffect(() => {
-        loadStatus();
-    }, []);
-
-    const loadStatus = async () => {
+    const loadStatus = useCallback(async () => {
         setStatus('LOADING');
         const result = await diditKYC.getStatus(walletAddress);
         if (result.success && result.status) {
@@ -50,14 +45,18 @@ export default function KYCVerifyScreen() {
         } else {
             setStatus('NOT_STARTED');
         }
-    };
+    }, [walletAddress]);
 
-    
+    useEffect(() => {
+        loadStatus();
+    }, [loadStatus]);
+
+
     const handleStartVerification = async () => {
         setIsStarting(true);
 
         try {
-            
+
             const result = await diditKYC.startVerification(walletAddress);
 
             if (!result.success || !result.verification_url) {
@@ -66,7 +65,7 @@ export default function KYCVerifyScreen() {
                 return;
             }
 
-            
+
             const opened = await diditKYC.openVerificationUrl(result.verification_url);
 
             if (!opened) {
@@ -75,14 +74,14 @@ export default function KYCVerifyScreen() {
                 return;
             }
 
-            
+
             setStatus('PENDING');
             setIsStarting(false);
 
-            
+
             diditKYC.pollForCompletion(walletAddress, {
                 intervalMs: 3000,
-                timeoutMs: 600000, 
+                timeoutMs: 600000,
                 onStatusChange: (newStatus) => {
                     setStatus(newStatus as VerificationStatus);
                 }
@@ -99,13 +98,13 @@ export default function KYCVerifyScreen() {
         }
     };
 
-    
+
     const handleRetry = () => {
         diditKYC.clearPendingSession();
         setStatus('NOT_STARTED');
     };
 
-    
+
     const renderStatusIcon = useCallback(() => {
         switch (status) {
             case 'APPROVED':
@@ -120,7 +119,7 @@ export default function KYCVerifyScreen() {
         }
     }, [status]);
 
-    
+
     const renderContent = () => {
         if (status === 'LOADING') {
             return (
@@ -202,7 +201,7 @@ export default function KYCVerifyScreen() {
             );
         }
 
-        
+
         return (
             <Animated.View entering={FadeInUp.delay(200)} style={styles.centerContent}>
                 {renderStatusIcon()}
@@ -212,7 +211,7 @@ export default function KYCVerifyScreen() {
                 </Text>
 
                 <View style={styles.infoBox}>
-                    <Text style={styles.infoTitle}>What you'll need:</Text>
+                    <Text style={styles.infoTitle}>What you&apos;ll need:</Text>
                     <Text style={styles.infoText}>• Good lighting for face capture</Text>
                     <Text style={styles.infoText}>• Camera access in your browser</Text>
                     <Text style={styles.infoText}>• ~2 minutes to complete</Text>

@@ -1,8 +1,20 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, TextInput, Alert, ScrollView } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, TouchableOpacity, Alert, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { QrCode, Monitor, Smartphone, Copy, Check, Shield, ArrowLeft, Eye, EyeOff } from 'lucide-react-native';
-import { loadWallet, getKeys } from '../../lib/stellar';
+
+const Icons = {
+    QrCode: QrCode as any,
+    Monitor: Monitor as any,
+    Smartphone: Smartphone as any,
+    Copy: Copy as any,
+    Check: Check as any,
+    Shield: Shield as any,
+    ArrowLeft: ArrowLeft as any,
+    Eye: Eye as any,
+    EyeOff: EyeOff as any,
+};
+import { getKeys } from '../../lib/stellar';
 import { Keypair } from '@stellar/stellar-sdk';
 type Mode = 'select' | 'export' | 'import';
 const encryptForTransfer = (secretKey: string, pin: string): string => {
@@ -75,12 +87,12 @@ export default function SyncScreen() {
         return (
             <View className="flex-1 bg-primary px-6 pt-16">
                 <TouchableOpacity onPress={() => router.back()} className="mb-6">
-                    <ArrowLeft size={24} color="#fff" />
+                    <Icons.ArrowLeft size={24} color="#fff" />
                 </TouchableOpacity>
 
                 <View className="items-center mb-8">
                     <View className="w-20 h-20 bg-purple-500/20 rounded-full items-center justify-center mb-4">
-                        <QrCode size={40} color="#A855F7" />
+                        <Icons.QrCode size={40} color="#A855F7" />
                     </View>
                     <Text className="text-2xl font-bold text-white mb-2">Sync Wallet</Text>
                     <Text className="text-gray-400 text-center">Transfer your wallet between devices</Text>
@@ -93,7 +105,7 @@ export default function SyncScreen() {
                         className="bg-surface border border-gray-700 rounded-2xl p-4 flex-row items-center"
                     >
                         <View className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl items-center justify-center mr-4">
-                            <Monitor size={24} color="#fff" />
+                            <Icons.Monitor size={24} color="#fff" />
                         </View>
                         <View className="flex-1">
                             <Text className="text-white font-bold text-lg">Export to Web</Text>
@@ -107,7 +119,7 @@ export default function SyncScreen() {
                         className="bg-surface border border-gray-700 rounded-2xl p-4 flex-row items-center"
                     >
                         <View className="w-12 h-12 bg-gray-700 rounded-xl items-center justify-center mr-4">
-                            <Smartphone size={24} color="#fff" />
+                            <Icons.Smartphone size={24} color="#fff" />
                         </View>
                         <View className="flex-1">
                             <Text className="text-white font-bold text-lg">Import from Web</Text>
@@ -118,7 +130,7 @@ export default function SyncScreen() {
 
                 {/* Security note */}
                 <View className="mt-8 bg-gray-800/50 rounded-xl p-4 flex-row items-start">
-                    <Shield size={20} color="#22C55E" />
+                    <Icons.Shield size={20} color="#22C55E" />
                     <Text className="text-gray-400 text-sm ml-3 flex-1">
                         Your wallet is encrypted with a PIN before transfer. The PIN is shown on screen and never transmitted.
                     </Text>
@@ -130,7 +142,7 @@ export default function SyncScreen() {
         return (
             <View className="flex-1 bg-primary px-6 pt-16">
                 <TouchableOpacity onPress={() => { setMode('select'); setQrData(''); }} className="mb-6">
-                    <ArrowLeft size={24} color="#fff" />
+                    <Icons.ArrowLeft size={24} color="#fff" />
                 </TouchableOpacity>
 
                 <View className="items-center mb-6">
@@ -147,7 +159,7 @@ export default function SyncScreen() {
                         {/* QR placeholder */}
                         <View className="bg-white rounded-2xl p-6 items-center mb-6">
                             <View className="w-48 h-48 bg-gray-100 rounded-xl items-center justify-center">
-                                <QrCode size={80} color="#333" />
+                                <Icons.QrCode size={80} color="#333" />
                             </View>
                         </View>
 
@@ -172,12 +184,12 @@ export default function SyncScreen() {
                         >
                             {copied ? (
                                 <>
-                                    <Check size={20} color="#22C55E" />
+                                    <Icons.Check size={20} color="#22C55E" />
                                     <Text className="text-green-400 font-bold ml-2">Copied!</Text>
                                 </>
                             ) : (
                                 <>
-                                    <Copy size={20} color="#fff" />
+                                    <Icons.Copy size={20} color="#fff" />
                                     <Text className="text-white font-bold ml-2">Copy QR Data</Text>
                                 </>
                             )}
@@ -200,7 +212,7 @@ export default function SyncScreen() {
     return (
         <View className="flex-1 bg-primary px-6 pt-16">
             <TouchableOpacity onPress={() => setMode('select')} className="mb-6">
-                <ArrowLeft size={24} color="#fff" />
+                <Icons.ArrowLeft size={24} color="#fff" />
             </TouchableOpacity>
 
             <View className="items-center mb-6">
@@ -219,11 +231,11 @@ export default function SyncScreen() {
                 <Text className="text-gray-400 text-sm">
                     1. Open LumenPay on your web browser{'\n'}
                     2. Go to Wallet → Sync{'\n'}
-                    3. Click "Export to QR"{'\n'}
+                    3. Click &quot;Export to QR&quot;{'\n'}
                     4. Scan the QR code with this phone{'\n'}
                     5. Enter the PIN shown on web
                 </Text>
             </View>
-        </View>
+        </View >
     );
 }

@@ -15,6 +15,14 @@ import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Globe, ShieldCheck, Zap, Wallet, ArrowRight } from 'lucide-react-native';
 
+const Icons = {
+    Globe: Globe as any,
+    ShieldCheck: ShieldCheck as any,
+    Zap: Zap as any,
+    Wallet: Wallet as any,
+    ArrowRight: ArrowRight as any,
+};
+
 
 const GlassView = ({ children, style }: { children: React.ReactNode; style?: any }) => (
     <View style={[{
@@ -34,15 +42,6 @@ export default function SplashScreen() {
     const router = useRouter();
 
 
-    const logoScale = useSharedValue(0);
-    const logoOpacity = useSharedValue(0);
-    const textOpacity = useSharedValue(0);
-    const subtextOpacity = useSharedValue(0);
-
-
-    const dot1Pos = useSharedValue(-100);
-    const dot2Pos = useSharedValue(100);
-    const centerGlow = useSharedValue(0);
     const glowOpacity = useSharedValue(0);
 
     useEffect(() => {
@@ -51,7 +50,7 @@ export default function SplashScreen() {
             -1,
             true
         );
-    }, []);
+    }, [glowOpacity]);
 
     const glowStyle = useAnimatedStyle(() => ({
         opacity: glowOpacity.value,
@@ -61,7 +60,7 @@ export default function SplashScreen() {
         <View style={styles.container}>
             <Animated.View entering={FadeInUp.delay(200).duration(1000)} style={styles.header}>
                 <View style={styles.iconContainer}>
-                    <Globe color="#00E5FF" size={32} />
+                    <Icons.Globe color="#00E5FF" size={32} />
                 </View>
                 <Text style={styles.title}>Lumen<Text style={styles.highlight}>Vault</Text></Text>
                 <Text style={styles.subtitle}>The Future of Smart Payments</Text>
@@ -69,9 +68,9 @@ export default function SplashScreen() {
 
             <View style={styles.featureContainer}>
                 {[
-                    { icon: ShieldCheck, title: "Non-Custodial", desc: "You own your keys, always." },
-                    { icon: Zap, title: "Lightning Fast", desc: "Settlement in seconds." },
-                    { icon: Wallet, title: "Universal", desc: "Pay anyone, anywhere." }
+                    { icon: Icons.ShieldCheck, title: "Non-Custodial", desc: "You own your keys, always." },
+                    { icon: Icons.Zap, title: "Lightning Fast", desc: "Settlement in seconds." },
+                    { icon: Icons.Wallet, title: "Universal", desc: "Pay anyone, anywhere." }
                 ].map((feature, index) => (
                     <Animated.View
                         key={index}
@@ -101,7 +100,7 @@ export default function SplashScreen() {
                     >
                         <Animated.View style={[StyleSheet.absoluteFill, { backgroundColor: '#fff', opacity: 0.2 }, glowStyle]} />
                         <Text style={styles.buttonText}>Get Started</Text>
-                        <ArrowRight color="#fff" size={20} />
+                        <Icons.ArrowRight color="#fff" size={20} />
                     </LinearGradient>
                 </TouchableOpacity>
 
