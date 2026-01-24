@@ -15,8 +15,7 @@ let SecureStore: any = null;
 
 if (typeof window !== 'undefined' && (window as any).expo) {
     try {
-        // SecureStore = require('expo-secure-store');
-        console.log("Expo Secure Store not enabled in web");
+        SecureStore = require('expo-secure-store');
     } catch {
         
     }

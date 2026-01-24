@@ -1,0 +1,48 @@
+<svg width="1500" height="500" viewBox="0 0 1500 500" fill="none" xmlns="http://www.w3.org/2000/svg">
+<rect width="1500" height="500" fill="black"/>
+<defs>
+<linearGradient id="bg_grad" x1="0" y1="0" x2="1500" y2="500" gradientUnits="userSpaceOnUse">
+<stop stop-color="#020617"/>
+<stop offset="1" stop-color="#0F172A"/>
+</linearGradient>
+<linearGradient id="grad_line" x1="0%" y1="0%" x2="100%" y2="0%">
+<stop offset="0%" style="stop-color:#3B82F6;stop-opacity:1" />
+<stop offset="100%" style="stop-color:#A855F7;stop-opacity:1" />
+</linearGradient>
+</defs>
+
+<!-- Background -->
+<rect width="1500" height="500" fill="url(#bg_grad)"/>
+
+<!-- Tech Grid -->
+<pattern id="smallGrid" width="40" height="40" patternUnits="userSpaceOnUse">
+<path d="M 40 0 L 0 0 0 40" fill="none" stroke="#1E293B" stroke-width="1"/>
+</pattern>
+<rect width="1500" height="500" fill="url(#smallGrid)"/>
+
+<!-- Logo Icon (Scalable Group) -->
+<g transform="translate(350, 150) scale(0.4)">
+    <!-- Hexagon -->
+    <path d="M256 56 L 436 156 L 436 356 L 256 456 L 76 356 L 76 156 Z" 
+          fill="none" 
+          stroke="url(#grad_line)" 
+          stroke-width="12"
+          stroke-opacity="0.8"/>
+          
+    <!-- Constellation -->
+    <circle cx="256" cy="160" r="16" fill="white"/>
+    <circle cx="340" cy="220" r="12" fill="#A5B4FC"/>
+    <circle cx="170" cy="220" r="12" fill="#A5B4FC"/>
+    <circle cx="256" cy="300" r="16" fill="white"/>
+    <circle cx="190" cy="380" r="12" fill="#93C5FD"/>
+    <circle cx="320" cy="380" r="12" fill="#93C5FD"/>
+    
+    <path d="M 170 220 L 256 160 L 340 220" stroke="url(#grad_line)" stroke-width="8" stroke-linecap="round"/>
+    <path d="M 256 160 L 256 300" stroke="url(#grad_line)" stroke-width="8" stroke-linecap="round"/>
+    <path d="M 190 380 L 256 300 L 320 380" stroke="url(#grad_line)" stroke-width="8" stroke-linecap="round"/>
+</g>
+
+<!-- Text -->
+<text x="50%" y="45%" dominant-baseline="central" text-anchor="middle" font-family="Arial, sans-serif" font-weight="bold" font-size="120" fill="white" letter-spacing="-2">StellarPay</text>
+<text x="50%" y="65%" dominant-baseline="central" text-anchor="middle" font-family="Arial, sans-serif" font-size="32" fill="#60A5FA" letter-spacing="4">WEB3 PAYMENTS REIMAGINED</text>
+</svg>

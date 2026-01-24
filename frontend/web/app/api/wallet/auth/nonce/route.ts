@@ -1,0 +1,47 @@
+
+
+
+
+
+
+
+
+
+import { NextRequest, NextResponse } from 'next/server';
+import { createNonce } from '@/lib/nonceStore';
+
+export async function POST(request: NextRequest) {
+    try {
+        const body = await request.json();
+        const { publicKey } = body;
+
+        if (!publicKey || typeof publicKey !== 'string') {
+            return NextResponse.json(
+                { error: 'Invalid public key' },
+                { status: 400 }
+            );
+        }
+
+        
+        if (!publicKey.startsWith('G') || publicKey.length !== 56) {
+            return NextResponse.json(
+                { error: 'Invalid Stellar public key format' },
+                { status: 400 }
+            );
+        }
+
+        
+        const { nonce, expiresAt } = createNonce(publicKey);
+
+        return NextResponse.json({
+            nonce,
+            expiresAt,
+        });
+    } catch (error: any) {
+        console.error('Nonce generation error:', error);
+        return NextResponse.json(
+            { error: 'Failed to generate nonce' },
+            { status: 500 }
+        );
+    }
+}
