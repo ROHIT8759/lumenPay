@@ -10,11 +10,9 @@ const supabase = createClient(
 
 const NETWORK_PASSPHRASE = Networks.TESTNET;
 const SERVER_URL = "https://horizon-testnet.stellar.org";
-const server = new Horizon.Server(SERVER_URL);
 
-
-
-
+// Removed module-level Horizon.Server instantiation to prevent client-side errors
+// Server instances should be created lazily when needed in API routes
 
 // Custodial key decryption removed. All signing happens client-side via LumenVault.
 

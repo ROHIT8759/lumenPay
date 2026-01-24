@@ -1,181 +1,97 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabaseClient';
-import { isConnected, getAddress, requestAccess } from "@stellar/freighter-api";
-import { walletAuth } from '@/lib/lumenVault/walletAuth';
 
-export type WalletType = 'lumenvault' | 'freighter' | 'internal' | null;
-
+/**
+ * Simplified wallet hook for custodial-only wallet system
+ * No external wallet connections - all wallets are managed server-side
+ */
 export function useWallet() {
     const [address, setAddress] = useState<string | null>(null);
-    const [walletType, setWalletType] = useState<WalletType>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [user, setUser] = useState<any>(null);
 
     useEffect(() => {
-        const savedType = localStorage.getItem('walletType') as WalletType;
-        if (savedType === 'lumenvault') {
-            checkLumenVault();
-        } else if (savedType === 'freighter') {
-            checkFreighter();
-        } else if (savedType === 'internal') {
-            fetchInternalWallet();
-        } else {
-            setLoading(false);
-        }
+        checkAuth();
+        
+        // Listen for auth changes
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+            if (event === 'SIGNED_IN' && session) {
+                await fetchCustodialWallet(session.user.id);
+            } else if (event === 'SIGNED_OUT') {
+                setAddress(null);
+                setUser(null);
+            }
+        });
+
+        return () => {
+            subscription.unsubscribe();
+        };
     }, []);
 
-    const checkLumenVault = async () => {
+    const checkAuth = async () => {
         try {
-            const session = walletAuth.getSession();
+            const { data: { session } } = await supabase.auth.getSession();
             if (session) {
-                setAddress(session.address);
-                setWalletType('lumenvault');
-            } else {
-                localStorage.removeItem('walletType');
+                setUser(session.user);
+                await fetchCustodialWallet(session.user.id);
             }
         } catch (e) {
-            console.error("LumenVault check failed", e);
+            console.error("Auth check failed", e);
         } finally {
             setLoading(false);
         }
     };
 
-    const connectLumenVault = async (passphrase: string) => {
-        setLoading(true);
-        setError(null);
-        try {
-            const stored = localStorage.getItem('lumenvault_wallet');
-            if (!stored) {
-                setError("No wallet found. Please import from mobile.");
-                return false;
-            }
-
-            const walletData = JSON.parse(stored);
-            const result = await walletAuth.signIn(walletData, passphrase);
-
-            if (result.success && result.session) {
-                setAddress(result.session.address);
-                setWalletType('lumenvault');
-                localStorage.setItem('walletType', 'lumenvault');
-                return true;
-            } else {
-                setError(result.error || "Authentication failed");
-                return false;
-            }
-        } catch (e: unknown) {
-            setError(e instanceof Error ? e.message : "Connection failed");
-            return false;
-        } finally {
-            setLoading(false);
-        }
-    };
-
-
-    const checkFreighter = async () => {
-        try {
-            const connected = await isConnected();
-            if (connected.isConnected) {
-                const addressResult = await getAddress();
-                if (addressResult.error) {
-                    console.error("Failed to get address", addressResult.error);
-                } else {
-                    setAddress(addressResult.address);
-                    setWalletType('freighter');
-                }
-            }
-        } catch (e) {
-            console.error("Freighter check failed", e);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const connectFreighter = async () => {
-        setLoading(true);
-        setError(null);
-        try {
-            const checkConnection = async () => {
-                const timeout = new Promise<{ isConnected: boolean }>((resolve) => setTimeout(() => resolve({ isConnected: false }), 2000));
-
-                const connection = isConnected();
-                return Promise.race([connection, timeout]);
-            };
-
-            const connected = await checkConnection();
-
-            if (!connected.isConnected) {
-
-                setError("Freighter not detected. Please install it.");
-                return false;
-            }
-            const accessResult = await requestAccess();
-            if (accessResult.error) {
-                setError(accessResult.error as string);
-                return false;
-            }
-            setAddress(accessResult.address);
-            setWalletType('freighter');
-            localStorage.setItem('walletType', 'freighter');
-            return true;
-        } catch (e: unknown) {
-            setError(e instanceof Error ? e.message : "Failed to connect Freighter");
-            return false;
-        } finally {
-            setLoading(false);
-        }
-    };
-
-
-    const fetchInternalWallet = async () => {
+    const fetchCustodialWallet = async (userId: string) => {
         try {
             setLoading(true);
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) {
-                setLoading(false);
-                return false;
+            setError(null);
+
+            // Fetch or create wallet for user
+            const response = await fetch('/api/wallet', {
+                method: 'GET',
+                headers: {
+                    'x-user-id': userId,
+                },
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to fetch wallet');
             }
 
-            const { data: wallet } = await supabase
-                .from('wallets')
-                .select('public_key')
-                .eq('user_id', user.id)
-                .single();
-
-            if (wallet) {
-                setAddress(wallet.public_key);
-                setWalletType('internal');
-                localStorage.setItem('walletType', 'internal');
-                return true;
+            const data = await response.json();
+            
+            if (data.publicKey || data.address) {
+                setAddress(data.publicKey || data.address);
             }
-        } catch (e) {
-            console.error("Fetch wallet error", e);
+        } catch (e: any) {
+            console.error("Failed to fetch wallet", e);
+            setError(e.message || "Failed to load wallet");
         } finally {
             setLoading(false);
         }
-        return false;
     };
 
-
-
-    const syncInternal = async () => {
-        return await fetchInternalWallet();
-    }
-
     const disconnect = async () => {
-        setAddress(null);
-        setWalletType(null);
-        localStorage.removeItem('walletType');
-        await supabase.auth.signOut();
-    }
+        setLoading(true);
+        try {
+            await supabase.auth.signOut();
+            setAddress(null);
+            setUser(null);
+        } catch (e: any) {
+            setError(e.message || "Failed to sign out");
+        } finally {
+            setLoading(false);
+        }
+    };
 
     return {
         address,
-        walletType,
+        user,
         loading,
         error,
-        connectFreighter,
-        connectLumenVault,
-        syncInternal,
-        disconnect
+        disconnect,
+        isConnected: !!address,
     };
 }

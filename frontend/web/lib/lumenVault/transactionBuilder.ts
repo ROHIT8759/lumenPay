@@ -256,5 +256,23 @@ class TransactionBuilderService {
     }
 }
 
+// Lazy initialization for safety
+let _transactionBuilderInstance: TransactionBuilderService | null = null;
 
-export const transactionBuilder = new TransactionBuilderService();
+export const transactionBuilder = {
+    get instance(): TransactionBuilderService {
+        if (!_transactionBuilderInstance) {
+            _transactionBuilderInstance = new TransactionBuilderService();
+        }
+        return _transactionBuilderInstance;
+    },
+    // Proxy methods
+    setHorizonServer: (server: any) => transactionBuilder.instance.setHorizonServer(server),
+    switchNetwork: (network: NetworkType) => transactionBuilder.instance.switchNetwork(network),
+    buildPaymentTransaction: (...args: Parameters<TransactionBuilderService['buildPaymentTransaction']>) => 
+        transactionBuilder.instance.buildPaymentTransaction(...args),
+    buildSorobanContractCall: (...args: Parameters<TransactionBuilderService['buildSorobanContractCall']>) => 
+        transactionBuilder.instance.buildSorobanContractCall(...args),
+    parseTransactionXDR: (...args: Parameters<TransactionBuilderService['parseTransactionXDR']>) => 
+        transactionBuilder.instance.parseTransactionXDR(...args),
+};

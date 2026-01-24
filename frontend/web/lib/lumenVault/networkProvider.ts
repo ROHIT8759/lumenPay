@@ -319,5 +319,25 @@ class NetworkProviderService {
     }
 }
 
+// Lazy initialization to prevent client-side instantiation errors
+let _networkProviderInstance: NetworkProviderService | null = null;
 
-export const networkProvider = new NetworkProviderService();
+export const networkProvider = {
+    get instance(): NetworkProviderService {
+        if (!_networkProviderInstance) {
+            _networkProviderInstance = new NetworkProviderService();
+        }
+        return _networkProviderInstance;
+    },
+    // Proxy commonly used methods
+    getHorizonServer: () => networkProvider.instance.getHorizonServer(),
+    getSorobanServer: () => networkProvider.instance.getSorobanServer(),
+    submitTransaction: (signedXDR: string) => networkProvider.instance.submitTransaction(signedXDR),
+    submitSorobanTransaction: (signedXDR: string) => networkProvider.instance.submitSorobanTransaction(signedXDR),
+    getAccount: (publicKey: string) => networkProvider.instance.getAccount(publicKey),
+    getAccountBalances: (publicKey: string) => networkProvider.instance.getAccountBalances(publicKey),
+    getTransactionHistory: (publicKey: string, limit?: number) => networkProvider.instance.getTransactionHistory(publicKey, limit),
+    switchNetwork: (network: NetworkType) => networkProvider.instance.switchNetwork(network),
+    getCurrentNetwork: () => networkProvider.instance.getCurrentNetwork(),
+    getNetworkPassphrase: () => networkProvider.instance.getNetworkPassphrase(),
+};

@@ -353,8 +353,29 @@ class NonCustodialWalletService {
   }
 }
 
+// Lazy initialization to prevent client-side instantiation errors
+let _walletServiceInstance: NonCustodialWalletService | null = null;
 
-export const walletService = new NonCustodialWalletService(true);
-
+export const walletService = {
+  get instance() {
+    if (!_walletServiceInstance) {
+      _walletServiceInstance = new NonCustodialWalletService(true);
+    }
+    return _walletServiceInstance;
+  },
+  // Proxy all methods to the instance
+  buildPaymentTransaction: (...args: Parameters<NonCustodialWalletService['buildPaymentTransaction']>) => 
+    walletService.instance.buildPaymentTransaction(...args),
+  submitSignedTransaction: (...args: Parameters<NonCustodialWalletService['submitSignedTransaction']>) => 
+    walletService.instance.submitSignedTransaction(...args),
+  getAccountBalance: (...args: Parameters<NonCustodialWalletService['getAccountBalance']>) => 
+    walletService.instance.getAccountBalance(...args),
+  getTransactionHistory: (...args: Parameters<NonCustodialWalletService['getTransactionHistory']>) => 
+    walletService.instance.getTransactionHistory(...args),
+  fundTestnetAccount: (...args: Parameters<NonCustodialWalletService['fundTestnetAccount']>) => 
+    walletService.instance.fundTestnetAccount(...args),
+  getAccountDetails: (...args: Parameters<NonCustodialWalletService['getAccountDetails']>) => 
+    walletService.instance.getAccountDetails(...args),
+};
 
 export { NonCustodialWalletService };

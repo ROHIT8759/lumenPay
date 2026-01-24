@@ -372,5 +372,29 @@ class WalletAbstraction {
     }
 }
 
+// Lazy initialization to prevent client-side instantiation errors
+let _walletAbstractionInstance: WalletAbstraction | null = null;
 
-export const walletAbstraction = new WalletAbstraction('testnet');
+export const walletAbstraction = {
+    get instance(): WalletAbstraction {
+        if (!_walletAbstractionInstance) {
+            _walletAbstractionInstance = new WalletAbstraction('testnet');
+        }
+        return _walletAbstractionInstance;
+    },
+    // Proxy methods
+    setNetwork: (network: NetworkType) => walletAbstraction.instance.setNetwork(network),
+    getNetworkPassphrase: () => walletAbstraction.instance.getNetworkPassphrase(),
+    buildPaymentTransaction: (...args: Parameters<WalletAbstraction['buildPaymentTransaction']>) => 
+        walletAbstraction.instance.buildPaymentTransaction(...args),
+    submitTransaction: (...args: Parameters<WalletAbstraction['submitTransaction']>) => 
+        walletAbstraction.instance.submitTransaction(...args),
+    getAccountBalances: (...args: Parameters<WalletAbstraction['getAccountBalances']>) => 
+        walletAbstraction.instance.getAccountBalances(...args),
+    getTransactionHistory: (...args: Parameters<WalletAbstraction['getTransactionHistory']>) => 
+        walletAbstraction.instance.getTransactionHistory(...args),
+    fundTestnetAccount: (...args: Parameters<WalletAbstraction['fundTestnetAccount']>) => 
+        walletAbstraction.instance.fundTestnetAccount(...args),
+    getPublicKeyFromUserId: (...args: Parameters<WalletAbstraction['getPublicKeyFromUserId']>) => 
+        walletAbstraction.instance.getPublicKeyFromUserId(...args),
+};

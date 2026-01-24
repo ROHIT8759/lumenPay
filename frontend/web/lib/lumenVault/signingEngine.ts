@@ -210,5 +210,21 @@ class SigningEngineService {
     }
 }
 
+// Lazy initialization for safety
+let _signingEngineInstance: SigningEngineService | null = null;
 
-export const signingEngine = new SigningEngineService();
+export const signingEngine = {
+    get instance(): SigningEngineService {
+        if (!_signingEngineInstance) {
+            _signingEngineInstance = new SigningEngineService();
+        }
+        return _signingEngineInstance;
+    },
+    // Proxy methods
+    signTransaction: (...args: Parameters<SigningEngineService['signTransaction']>) => 
+        signingEngine.instance.signTransaction(...args),
+    signMessage: (...args: Parameters<SigningEngineService['signMessage']>) => 
+        signingEngine.instance.signMessage(...args),
+    signWithSession: (...args: Parameters<SigningEngineService['signWithSession']>) => 
+        signingEngine.instance.signWithSession(...args),
+};

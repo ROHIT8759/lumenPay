@@ -91,8 +91,8 @@ export default function AboutPage() {
                         <div className="grid md:grid-cols-3 gap-8">
                             <StepCard
                                 step="01"
-                                title="Connect Wallet"
-                                desc="Log in securely using your favorite Stellar wallet like Freighter or Albedo."
+                                title="Sign Up Instantly"
+                                desc="Create your account with email - your secure wallet is automatically created."
                             />
                             <StepCard
                                 step="02"
