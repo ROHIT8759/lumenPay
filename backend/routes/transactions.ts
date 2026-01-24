@@ -1,4 +1,5 @@
 import { Router, Response } from 'express';
+import { createClient } from '@supabase/supabase-js';
 import { walletService } from '../services/walletService';
 import { TxRelayService } from '../services/txRelayService';
 import { authenticate, AuthenticatedRequest } from '../middleware/auth';
@@ -15,7 +16,12 @@ import prisma from '../lib/prisma';
 
 const router = Router();
 
-const txRelayService = new TxRelayService(prisma);
+const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
+
+const txRelayService = new TxRelayService(supabase);
 
 /**
  * POST /transactions/build-payment

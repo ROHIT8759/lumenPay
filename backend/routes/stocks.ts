@@ -165,12 +165,12 @@ router.post('/buy', authenticate, async (req: AuthenticatedRequest, res: Respons
                 txHash: `STOCK_BUY_${Date.now()}`,
                 fromAddress: walletAddress,
                 toAddress: 'STOCK_ESCROW',
-                amount: totalCost,
-                asset: paymentAsset,
+                amount: totalCost.toString(),
+                assetCode: paymentAsset,
                 type: 'STOCK_BUY',
                 status: 'SUCCESS',
                 memo: `Buy ${units} ${symbol}`,
-                ledger: 'OFF_CHAIN',
+                ledgerType: 'OFF_CHAIN',
             },
         });
 
@@ -268,12 +268,12 @@ router.post('/sell', authenticate, async (req: AuthenticatedRequest, res: Respon
                 txHash: `STOCK_SELL_${Date.now()}`,
                 fromAddress: 'STOCK_ESCROW',
                 toAddress: walletAddress,
-                amount: saleValue,
-                asset: 'USDC',
+                amount: saleValue.toString(),
+                assetCode: 'USDC',
                 type: 'STOCK_SELL',
                 status: 'SUCCESS',
                 memo: `Sell ${units} ${symbol}`,
-                ledger: 'OFF_CHAIN',
+                ledgerType: 'OFF_CHAIN',
             },
         });
 

@@ -8,7 +8,8 @@ import { secureStorage } from '@/lib/lumenVault/secureStorage';
 import { networkProvider } from '@/lib/lumenVault/networkProvider'; 
 import { useWallet } from './WalletProvider';
 import { Copy, Eye, EyeOff, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
-import { useWallet } from './WalletProvider';
+import { walletAuth } from '@/lib/lumenVault/walletAuth';
+
 export function CreateWallet() {
     const { refreshState } = useWallet();
     const [step, setStep] = useState(0);

@@ -85,10 +85,7 @@ router.post('/on/:id/confirm-inr', async (req, res) => {
 
         const result = await rampService.confirmInrPayment(id, paymentRef);
 
-        res.json({
-            success: true,
-            ...result,
-        });
+        res.json(result);
     } catch (error: any) {
         console.error('Confirm INR error:', error);
         res.status(500).json({
@@ -109,10 +106,7 @@ router.post('/on/:id/build-onchain', authenticate, async (req: AuthenticatedRequ
 
         const result = await rampService.buildOnRampOnChainTx(id, toAddress);
 
-        res.json({
-            success: true,
-            ...result,
-        });
+        res.json(result);
     } catch (error: any) {
         console.error('Build on-chain error:', error);
         res.status(500).json({
@@ -137,10 +131,7 @@ router.post('/on/:id/complete', authenticate, async (req: AuthenticatedRequest, 
 
         const result = await rampService.completeOnRamp(id, txHash);
 
-        res.json({
-            success: true,
-            ...result,
-        });
+        res.json(result);
     } catch (error: any) {
         console.error('Complete on-ramp error:', error);
         res.status(500).json({
@@ -241,10 +232,7 @@ router.post('/off/:id/confirm-lock', async (req, res) => {
 
         const result = await rampService.confirmCryptoLocked(id, lockTxHash);
 
-        res.json({
-            success: true,
-            ...result,
-        });
+        res.json(result);
     } catch (error: any) {
         console.error('Confirm lock error:', error);
         res.status(500).json({
@@ -270,10 +258,7 @@ router.post('/off/:id/payout', async (req, res) => {
 
         const result = await rampService.triggerInrPayout(id);
 
-        res.json({
-            success: true,
-            ...result,
-        });
+        res.json(result);
     } catch (error: any) {
         console.error('Payout error:', error);
         res.status(500).json({
@@ -299,10 +284,7 @@ router.post('/off/:id/complete', async (req, res) => {
 
         const result = await rampService.completeOffRamp(id);
 
-        res.json({
-            success: true,
-            ...result,
-        });
+        res.json(result);
     } catch (error: any) {
         console.error('Complete off-ramp error:', error);
         res.status(500).json({

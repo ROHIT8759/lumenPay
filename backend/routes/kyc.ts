@@ -4,6 +4,17 @@ import prisma from '../lib/prisma';
 const router = Router();
 
 const DIDIT_API_URL = 'https://api.didit.me/v1'; // Verify actual URL
+import { createClient } from '@supabase/supabase-js';
+import prisma from '../lib/prisma';
+
+const router = Router();
+
+const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
+
+const DIDIT_API_URL = 'https://api.didit.me/v1'; // Verify actual URL
 const DIDIT_API_KEY = process.env.DIDIT_API_KEY;
 
 /**
@@ -23,17 +34,16 @@ router.post('/session', async (req: Request, res: Response) => {
             return res.status(503).json({ error: 'KYC Service Unavailable (Missing Config)' });
         }
 
-        // Call real DiD iT API
         const response = await fetch(`${DIDIT_API_URL}/sessions`, {
             method: 'POST',
             headers: {
-                'Authorization': `Bearer ${DIDIT_API_KEY}`,
-                'Content-Type': 'application/json'
+                Authorization: `Bearer ${DIDIT_API_KEY}`,
+                'Content-Type': 'application/json',
             },
             body: JSON.stringify({
                 vendor_data: walletAddress,
-                features: ['id_document', 'selfie']
-            })
+                features: ['id_document', 'selfie'],
+            }),
         });
 
         if (!response.ok) {
@@ -41,9 +51,8 @@ router.post('/session', async (req: Request, res: Response) => {
             throw new Error(`DiD iT API Error: ${errorText}`);
         }
 
-        const data = await response.json() as any;
+        const data = (await response.json()) as any;
 
-        // Store session in Database (User table)
         await prisma.user.update({
             where: { walletAddress },
             data: {
@@ -55,9 +64,8 @@ router.post('/session', async (req: Request, res: Response) => {
         res.json({
             success: true,
             verification_url: data.verification_url,
-            session_id: data.session_id
+            session_id: data.session_id,
         });
-
     } catch (error: any) {
         console.error('KYC Session Error:', error);
         res.status(500).json({ error: 'Failed to create KYC session', details: error.message });
@@ -76,7 +84,6 @@ router.get('/status', async (req: Request, res: Response) => {
             return res.status(400).json({ error: 'Missing walletAddress' });
         }
 
-        // 1. Check local DB first (Webhook might have updated it)
         const { data: session } = await supabase
             .from('kyc_sessions')
             .select('*')
@@ -89,45 +96,43 @@ router.get('/status', async (req: Request, res: Response) => {
             return res.json({
                 success: true,
                 status: session.status,
-                confidence_score: session.confidence_score
+                confidence_score: session.confidence_score,
             });
         }
 
-        // 2. If pending or missing, check DiD iT API directly (Real-time fallback)
         if (session?.session_id && DIDIT_API_KEY) {
             const response = await fetch(`${DIDIT_API_URL}/sessions/${session.session_id}/decision`, {
                 headers: {
-                    'Authorization': `Bearer ${DIDIT_API_KEY}`
-                }
+                    Authorization: `Bearer ${DIDIT_API_KEY}`,
+                },
             });
 
             if (response.ok) {
-                const decision = await response.json() as any;
-                // Map decision to status
-                const status = decision.decision === 'Accept' ? 'APPROVED' :
-                    decision.decision === 'Reject' ? 'REJECTED' : 'PENDING';
+                const decision = (await response.json()) as any;
+                const status = decision.decision === 'Accept' ? 'APPROVED' : decision.decision === 'Reject' ? 'REJECTED' : 'PENDING';
 
-                // Update DB
                 if (status !== 'PENDING') {
-                    await supabase.from('kyc_sessions').update({
-                        status,
-                        updated_at: new Date().toISOString()
-                    }).eq('session_id', session.session_id);
+                    await supabase
+                        .from('kyc_sessions')
+                        .update({
+                            status,
+                            updated_at: new Date().toISOString(),
+                        })
+                        .eq('session_id', session.session_id);
                 }
 
                 return res.json({
                     success: true,
                     status,
-                    confidence_score: decision.score // Assuming API returns score
+                    confidence_score: decision.score,
                 });
             }
         }
 
         res.json({
             success: true,
-            status: session?.status || 'NOT_STARTED'
+            status: session?.status || 'NOT_STARTED',
         });
-
     } catch (error: any) {
         console.error('KYC Status Error:', error);
         res.status(500).json({ error: 'Failed to check KYC status' });
