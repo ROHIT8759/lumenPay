@@ -212,3 +212,13 @@ enum EscrowStatus {
   CANCELLED
   @@schema("public")
 }
+
+model IndexerState {
+  id                Int      @id @default(autoincrement())
+  lastHorizonCursor String
+  lastSorobanLedger Int
+  updatedAt         DateTime @updatedAt
+  
+  @@map("indexer_state")
+  @@schema("public")
+}

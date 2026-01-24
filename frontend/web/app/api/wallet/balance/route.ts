@@ -6,16 +6,16 @@ import { networkProvider } from '@/lib/lumenVault';
 export async function GET(request: NextRequest) {
     try {
         const { searchParams } = new URL(request.url);
-        const address = searchParams.get('address');
+        const address = searchParams.get('address') || searchParams.get('publicKey');
 
         if (!address) {
             return NextResponse.json(
-                { error: 'Address parameter required' },
+                { error: 'Address or publicKey parameter required' },
                 { status: 400 }
             );
         }
 
-        
+
         if (!address.startsWith('G') || address.length !== 56) {
             return NextResponse.json(
                 { error: 'Invalid Stellar address format' },
@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
             );
         }
 
-        
+
         const result = await networkProvider.getBalances(address);
 
         if (result.error) {

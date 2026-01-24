@@ -51,31 +51,50 @@ export default function Home() {
   const [people, setPeople] = useState<Person[]>([]);
   const [peopleLoading, setPeopleLoading] = useState(true);
 
+  const [balance, setBalance] = useState<{ native: string, usdc: string } | null>(null);
+  const [balanceLoading, setBalanceLoading] = useState(true);
+
   useEffect(() => {
-    fetchPeople();
+    fetchData();
   }, []);
 
-  const fetchPeople = async () => {
+  const fetchData = async () => {
     try {
-      setPeopleLoading(true);
       const userId = localStorage.getItem('userId');
       if (!userId) {
         setPeopleLoading(false);
+        setBalanceLoading(false);
         return;
       }
 
-      const response = await fetch('/api/people?limit=7', {
+      // Fetch People
+      fetch('/api/people?limit=7', {
+        headers: { 'x-user-id': userId },
+      })
+        .then(res => res.json())
+        .then(data => setPeople(data.people || []))
+        .catch(err => console.error('Error fetching people:', err))
+        .finally(() => setPeopleLoading(false));
+
+      // Fetch Wallet & Balance
+      const walletRes = await fetch('/api/wallet', {
         headers: { 'x-user-id': userId },
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        setPeople(data.people || []);
+      if (walletRes.ok) {
+        const walletData = await walletRes.json();
+        if (walletData.publicKey) {
+          const balanceRes = await fetch(`/api/wallet/balance?publicKey=${walletData.publicKey}`);
+          if (balanceRes.ok) {
+            const balanceData = await balanceRes.json();
+            setBalance(balanceData);
+          }
+        }
       }
     } catch (err) {
-      console.error('Error fetching people:', err);
+      console.error('Error fetching dashboard data:', err);
     } finally {
-      setPeopleLoading(false);
+      setBalanceLoading(false);
     }
   };
 
@@ -84,7 +103,7 @@ export default function Home() {
       variants={container}
       initial="hidden"
       animate="show"
-      className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-md sm:max-w-2xl lg:max-w-4xl xl:max-w-6xl space-y-4 sm:space-y-6"
+      className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-md sm:max-w-2xl lg:max-w-4xl xl:max-w-6xl space-y-4 sm:space-y-6 pb-20"
     >
       {/* 1. Quick Actions */}
       <motion.section variants={item}>
@@ -117,7 +136,42 @@ export default function Home() {
         </div>
       </motion.section>
 
-      {/* 2. People */}
+      {/* 2. Balance Card */}
+      <motion.section variants={item}>
+        <GlassCard className="bg-gradient-to-br from-blue-900/40 to-black border-blue-500/20">
+          <div className="flex justify-between items-start mb-4">
+            <div>
+              <h2 className="text-sm text-gray-300 mb-1">Total Balance</h2>
+              {balanceLoading ? (
+                <div className="h-10 w-40 bg-gray-800 animate-pulse rounded" />
+              ) : (
+                <div className="text-3xl font-bold font-mono tracking-tight">
+                  {parseFloat(balance?.usdc || '0').toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  <span className="text-sm text-gray-500 font-sans ml-2">USDC</span>
+                </div>
+              )}
+              {!balanceLoading && (
+                <div className="text-xs text-gray-400 mt-1">
+                  + {parseFloat(balance?.native || '0').toFixed(2)} XLM
+                </div>
+              )}
+            </div>
+            <div className="p-2 bg-blue-500 rounded-lg">
+              <Banknote className="text-white" size={20} />
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <Link href="/on-ramp" className="flex-1">
+              <button className="w-full py-2 bg-blue-600 hover:bg-blue-500 rounded-lg text-sm font-medium transition-colors">Add Money</button>
+            </Link>
+            <Link href="/off-ramp" className="flex-1">
+              <button className="w-full py-2 bg-white/10 hover:bg-white/20 rounded-lg text-sm font-medium transition-colors">Withdraw</button>
+            </Link>
+          </div>
+        </GlassCard>
+      </motion.section>
+
+      {/* 3. People */}
       <motion.section variants={item}>
         <div className="flex justify-between items-end mb-3">
           <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider">People</h2>
@@ -190,7 +244,7 @@ export default function Home() {
         )}
       </motion.section>
 
-      {/* 3. Billing & Retail */}
+      {/* 4. Billing & Retail */}
       <motion.section variants={item}>
         <div className="flex justify-between items-end mb-3">
           <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider">Billing & Retail</h2>
@@ -224,7 +278,7 @@ export default function Home() {
         </div>
       </motion.section>
 
-      {/* 4. Offers & Rewards */}
+      {/* 5. Offers & Rewards */}
       <motion.section variants={item} className="grid grid-cols-2 gap-3">
         <GlassCard className="relative overflow-hidden group" hoverEffect>
           <div className="absolute top-0 right-0 p-2 opacity-10 group-hover:opacity-20 transition">
@@ -260,13 +314,13 @@ export default function Home() {
         </GlassCard>
       </motion.section>
 
-      {/* 5. Smart Contract Integration */}
+      {/* 6. Smart Contract Integration */}
       <motion.section variants={item}>
         <h2 className="text-sm font-semibold text-gray-400 mb-3 uppercase tracking-wider">Smart Contract</h2>
         <ContractInteraction />
       </motion.section>
 
-      {/* 6. Transactions CTA */}
+      {/* 7. Transactions CTA */}
       <motion.section variants={item}>
         <Link href="/transactions">
           <GlassCard className="flex items-center justify-between" hoverEffect>
@@ -282,25 +336,6 @@ export default function Home() {
             <ChevronRight className="text-gray-500" />
           </GlassCard>
         </Link>
-      </motion.section>
-
-      {/* 6. Balance Card */}
-      <motion.section variants={item} className="pb-8">
-        <GlassCard className="bg-gradient-to-br from-blue-900/40 to-black border-blue-500/20">
-          <div className="flex justify-between items-start mb-4">
-            <div>
-              <h2 className="text-sm text-gray-300 mb-1">Total Balance</h2>
-              <div className="text-3xl font-bold font-mono tracking-tight">$12,450.00 <span className="text-sm text-gray-500 font-sans">USDC</span></div>
-            </div>
-            <div className="p-2 bg-blue-500 rounded-lg">
-              <Banknote className="text-white" size={20} />
-            </div>
-          </div>
-          <div className="flex gap-2">
-            <button className="flex-1 py-2 bg-blue-600 hover:bg-blue-500 rounded-lg text-sm font-medium transition-colors">Add Money</button>
-            <button className="flex-1 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-sm font-medium transition-colors">Withdraw</button>
-          </div>
-        </GlassCard>
       </motion.section>
 
       {/* Modals */}
