@@ -172,15 +172,13 @@ export default function ConfirmScreen() {
                         </Text>
                     </View>
 
-                    { }
-                    {biometricsEnabled && (
-                        <View className="bg-green-500/10 p-4 rounded-xl flex-row items-center gap-3 mt-3">
-                            <Icons.Fingerprint color="#22C55E" size={20} />
-                            <Text className="text-green-400 text-xs flex-1">
-                                {biometricType} verification enabled
-                            </Text>
-                        </View>
-                    )}
+                    {/* Biometrics Status */}
+                    <View className="bg-green-500/10 p-4 rounded-xl flex-row items-center gap-3 mt-3">
+                        <Icons.Fingerprint color="#22C55E" size={20} />
+                        <Text className="text-green-400 text-xs flex-1">
+                            Secure Biometric Signing Enabled
+                        </Text>
+                    </View>
                 </View>
 
                 <View className="flex-1" />
