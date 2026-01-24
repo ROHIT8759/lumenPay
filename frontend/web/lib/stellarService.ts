@@ -6,7 +6,7 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-const NETWORK_PASSPHRASE = Networks.TESTNET;.
+const NETWORK_PASSPHRASE = Networks.TESTNET;
 export async function registerUserWallet(userId: string, publicKey: string) {
   try {
     const { data: profile } = await supabase

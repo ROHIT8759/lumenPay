@@ -1,7 +1,7 @@
 # LumenPay 🌟
 > **Embedded Wallet–First Payments & Finance Platform on Stellar**
 
-![LumenPay Architecture](public/assets/architecture_diagram.png)
+![LumenPay Architecture](frontend/web/public/assets/architecture_diagram.png)
 
 ## 📖 Overview
 

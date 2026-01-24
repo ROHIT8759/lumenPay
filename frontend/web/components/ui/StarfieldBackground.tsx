@@ -17,42 +17,42 @@ function WarpStars({ count = 800 }) {
     const REPEL_RADIUS = 2.5;
     const REPEL_STRENGTH = 8;
 
-    // Use a stable memo for random values initialized once in a safe way
-    const { positions, velocities, sizes } = useMemo(() => {
+    const [positions, setPositions] = useState<Float32Array>(new Float32Array(count * 3));
+    const [velocities, setVelocities] = useState<Float32Array>(new Float32Array(count * 3));
+    const [sizes, setSizes] = useState<Float32Array>(new Float32Array(count));
+
+    useEffect(() => {
         const pos = new Float32Array(count * 3);
         const vel = new Float32Array(count * 3);
         const siz = new Float32Array(count);
-
         for (let i = 0; i < count; i++) {
             const r1 = Math.random();
             const r2 = Math.random();
             const r3 = Math.random();
             const r4 = Math.random();
             const r5 = Math.random();
-
             const theta = r1 * Math.PI * 2;
             const phi = Math.acos(2 * r2 - 1);
             const distance = CENTER_SPAWN_RADIUS + r3 * (MAX_DISTANCE - CENTER_SPAWN_RADIUS);
-
             pos[i * 3] = distance * Math.sin(phi) * Math.cos(theta);
             pos[i * 3 + 1] = distance * Math.sin(phi) * Math.sin(theta);
             pos[i * 3 + 2] = distance * Math.cos(phi);
-
             const speed = 0.3 + r4 * 0.5;
             vel[i * 3] = Math.sin(phi) * Math.cos(theta) * speed;
             vel[i * 3 + 1] = Math.sin(phi) * Math.sin(theta) * speed;
             vel[i * 3 + 2] = Math.cos(phi) * speed;
-
             siz[i] = 0.005 + r5 * 0.008;
         }
-        return { positions: pos, velocities: vel, sizes: siz };
+        setPositions(pos);
+        setVelocities(vel);
+        setSizes(siz);
     }, [count]);
 
     // Use actual refs for values that we mutate in useFrame to satisfy the immutability rule
     const currentVelocities = useRef(velocities);
     useEffect(() => {
         currentVelocities.current = velocities;
-    }, [velocities]);
+    }, [count]);
 
     useFrame((_state, delta) => {
         if (!mesh.current) return;
