@@ -13,7 +13,7 @@ export const metadata: Metadata = {
   title: "LumenPay | Reimagining UPI on Stellar",
   description: "Clean, fast, calm, powerful, and invisible Web3 payments.",
   icons: {
-    icon: "/assets/logo.png",
+    icon: "/assets/logo.png", 
     apple: "/assets/logo.png",
   },
   viewport: {

@@ -159,17 +159,18 @@ router.post('/buy', authenticate, async (req: AuthenticatedRequest, res: Respons
         }
 
         // Record transaction
-        await prisma.transaction.create({
+        await prisma.unifiedTransaction.create({
             data: {
                 walletAddress,
                 txHash: `STOCK_BUY_${Date.now()}`,
                 fromAddress: walletAddress,
                 toAddress: 'STOCK_ESCROW',
-                amount: totalCost.toString(),
-                assetCode: paymentAsset,
+                amount: totalCost,
+                asset: paymentAsset,
                 type: 'STOCK_BUY',
                 status: 'SUCCESS',
                 memo: `Buy ${units} ${symbol}`,
+                ledger: 'OFF_CHAIN',
             },
         });
 
@@ -261,17 +262,18 @@ router.post('/sell', authenticate, async (req: AuthenticatedRequest, res: Respon
         }
 
         // Record transaction
-        await prisma.transaction.create({
+        await prisma.unifiedTransaction.create({
             data: {
                 walletAddress,
                 txHash: `STOCK_SELL_${Date.now()}`,
                 fromAddress: 'STOCK_ESCROW',
                 toAddress: walletAddress,
-                amount: saleValue.toString(),
-                assetCode: 'USDC',
+                amount: saleValue,
+                asset: 'USDC',
                 type: 'STOCK_SELL',
                 status: 'SUCCESS',
                 memo: `Sell ${units} ${symbol}`,
+                ledger: 'OFF_CHAIN',
             },
         });
 

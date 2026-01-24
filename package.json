@@ -6,8 +6,11 @@
         "backend/*"
     ],
     "scripts": {
+        "dev": "echo 'Run backend:dev and web:dev in separate terminals'",
         "web:dev": "pnpm --filter lumenpay dev",
         "web:build": "pnpm --filter lumenpay build",
+        "backend:dev": "pnpm --filter lumenpay-backend dev",
+        "backend:build": "pnpm --filter lumenpay-backend build",
         "mobile:start": "pnpm --filter lumenpay-mobile start",
         "backend:migrate": "echo 'Run migrations from backend/supabase'"
     },

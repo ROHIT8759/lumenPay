@@ -32,12 +32,11 @@ class WalletAuthService {
         error?: string;
     }> {
         try {
-            const response = await fetch(`${API.BASE_URL}${API.AUTH.NONCE}`, {
-                method: 'POST',
+            const response = await fetch(`${API.BASE_URL}${API.AUTH.NONCE}?publicKey=${publicKey}`, {
+                method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ publicKey }),
             });
 
             if (!response.ok) {

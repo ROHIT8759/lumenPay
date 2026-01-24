@@ -1,8 +1,8 @@
 import { Router, Response } from 'express';
-import { createClient } from '@supabase/supabase-js';
 import { walletService } from '../services/walletService';
 import { TxRelayService } from '../services/txRelayService';
 import { authenticate, AuthenticatedRequest } from '../middleware/auth';
+import prisma from '../lib/prisma';
 
 /**
  * Transaction Routes
@@ -15,12 +15,7 @@ import { authenticate, AuthenticatedRequest } from '../middleware/auth';
 
 const router = Router();
 
-const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
-
-const txRelayService = new TxRelayService(supabase);
+const txRelayService = new TxRelayService(prisma);
 
 /**
  * POST /transactions/build-payment
@@ -166,17 +161,20 @@ router.get('/user/:publicKey', authenticate, async (req: AuthenticatedRequest, r
             });
         }
 
-        // Query transactions where user is sender or receiver
-        const { data: transactions, error } = await supabase
-            .from('transactions')
-            .select('*')
-            .or(`from_address.eq.${publicKey},to_address.eq.${publicKey}`)
-            .order('created_at', { ascending: false })
-            .limit(100);
-
-        if (error) {
-            throw new Error(`Database error: ${error.message}`);
-        }
+        // Query unified transactions where user is sender or receiver
+        const transactions = await prisma.unifiedTransaction.findMany({
+            where: {
+                OR: [
+                    { walletAddress: publicKey },
+                    { fromAddress: publicKey },
+                    { toAddress: publicKey }
+                ]
+            },
+            orderBy: {
+                createdAt: 'desc'
+            },
+            take: 100
+        });
 
         res.json({
             success: true,

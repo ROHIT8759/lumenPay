@@ -1,6 +1,6 @@
 import {
   Contract,
-  SorobanRpc,
+  rpc,
   TransactionBuilder,
   Networks,
   BASE_FEE,
@@ -15,15 +15,8 @@ import {
 const CONTRACT_ID = process.env.NEXT_PUBLIC_STELLAR_CONTRACT_ID || process.env.STELLAR_CONTRACT_ID;
 const HORIZON_URL = process.env.NEXT_PUBLIC_HORIZON_URL || 'https://horizon-testnet.stellar.org';
 const SOROBAN_RPC_URL = process.env.NEXT_PUBLIC_SOROBAN_RPC_URL || 'https://soroban-testnet.stellar.org';
-
-// Lazy initialization to prevent client-side instantiation errors
-let _serverInstance: SorobanRpc.Server | null = null;
-function getServer(): SorobanRpc.Server {
-  if (!_serverInstance) {
-    _serverInstance = new SorobanRpc.Server(SOROBAN_RPC_URL);
-  }
-  return _serverInstance;
-}
+// Initialize Soroban RPC Server
+const server = new rpc.Server(SOROBAN_RPC_URL);
 
 /**
  * Get the smart contract instance
@@ -46,7 +39,7 @@ export async function sendContractPayment(
 ): Promise<{ success: boolean; transactionHash: string }> {
   try {
     const contract = getContract();
-    const sourceAccount = await getServer().getAccount(sourceKeypair.publicKey());
+    const sourceAccount = await server.getAccount(sourceKeypair.publicKey());
 
     // Build the transaction
     const transaction = new TransactionBuilder(sourceAccount, {
@@ -65,24 +58,24 @@ export async function sendContractPayment(
       .build();
 
     // Simulate the transaction
-    const simulated = await getServer().simulateTransaction(transaction);
+    const simulated = await server.simulateTransaction(transaction);
     
-    if (SorobanRpc.Api.isSimulationError(simulated)) {
+    if (rpc.Api.isSimulationError(simulated)) {
       throw new Error(`Simulation failed: ${simulated.error}`);
     }
 
     // Prepare and sign the transaction
-    const prepared = SorobanRpc.assembleTransaction(transaction, simulated).build();
+    const prepared = rpc.assembleTransaction(transaction, simulated).build();
     prepared.sign(sourceKeypair);
 
     // Submit the transaction
-    const result = await getServer().sendTransaction(prepared);
+    const result = await server.sendTransaction(prepared);
 
     // Wait for confirmation
-    let status = await getServer().getTransaction(result.hash);
+    let status = await server.getTransaction(result.hash);
     while (status.status === 'NOT_FOUND') {
       await new Promise((resolve) => setTimeout(resolve, 1000));
-      status = await getServer().getTransaction(result.hash);
+      status = await server.getTransaction(result.hash);
     }
 
     if (status.status === 'SUCCESS') {
@@ -108,7 +101,7 @@ export async function getContractBalance(address: string): Promise<string> {
     
     // For demo purposes, this would call a contract method to get balance
     // Adjust based on your actual contract methods
-    const sourceAccount = await getServer().getAccount(address);
+    const sourceAccount = await server.getAccount(address);
     
     const transaction = new TransactionBuilder(sourceAccount, {
       fee: BASE_FEE,
@@ -123,9 +116,9 @@ export async function getContractBalance(address: string): Promise<string> {
       .setTimeout(30)
       .build();
 
-    const simulated = await getServer().simulateTransaction(transaction);
+    const simulated = await server.simulateTransaction(transaction);
     
-    if (SorobanRpc.Api.isSimulationError(simulated)) {
+    if (rpc.Api.isSimulationError(simulated)) {
       throw new Error(`Simulation failed: ${simulated.error}`);
     }
 
@@ -152,7 +145,7 @@ export async function recordContractTransaction(
 ): Promise<boolean> {
   try {
     const contract = getContract();
-    const userAccount = await getServer().getAccount(userKeypair.publicKey());
+    const userAccount = await server.getAccount(userKeypair.publicKey());
 
     const transaction = new TransactionBuilder(userAccount, {
       fee: BASE_FEE,
@@ -170,21 +163,21 @@ export async function recordContractTransaction(
       .setTimeout(30)
       .build();
 
-    const simulated = await getServer().simulateTransaction(transaction);
+    const simulated = await server.simulateTransaction(transaction);
     
-    if (SorobanRpc.Api.isSimulationError(simulated)) {
+    if (rpc.Api.isSimulationError(simulated)) {
       throw new Error(`Simulation failed: ${simulated.error}`);
     }
 
-    const prepared = SorobanRpc.assembleTransaction(transaction, simulated).build();
+    const prepared = rpc.assembleTransaction(transaction, simulated).build();
     prepared.sign(userKeypair);
 
-    const result = await getServer().sendTransaction(prepared);
+    const result = await server.sendTransaction(prepared);
     
-    let status = await getServer().getTransaction(result.hash);
+    let status = await server.getTransaction(result.hash);
     while (status.status === 'NOT_FOUND') {
       await new Promise((resolve) => setTimeout(resolve, 1000));
-      status = await getServer().getTransaction(result.hash);
+      status = await server.getTransaction(result.hash);
     }
 
     return status.status === 'SUCCESS';
@@ -204,7 +197,7 @@ export async function createPaymentRequest(
 ): Promise<{ success: boolean; requestId?: string }> {
   try {
     const contract = getContract();
-    const requesterAccount = await getServer().getAccount(requesterKeypair.publicKey());
+    const requesterAccount = await server.getAccount(requesterKeypair.publicKey());
 
     const transaction = new TransactionBuilder(requesterAccount, {
       fee: BASE_FEE,
@@ -221,13 +214,13 @@ export async function createPaymentRequest(
       .setTimeout(30)
       .build();
 
-    const simulated = await getServer().simulateTransaction(transaction);
+    const simulated = await server.simulateTransaction(transaction);
     
-    if (SorobanRpc.Api.isSimulationError(simulated)) {
+    if (rpc.Api.isSimulationError(simulated)) {
       throw new Error(`Simulation failed: ${simulated.error}`);
     }
 
-    const prepared = SorobanRpc.assembleTransaction(transaction, simulated).build();
+    const prepared = rpc.assembleTransaction(transaction, simulated).build();
     prepared.sign(requesterKeypair);
 
     const result = await getServer().sendTransaction(prepared);

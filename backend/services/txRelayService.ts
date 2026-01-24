@@ -1,5 +1,5 @@
 import { Horizon, Transaction, Networks } from '@stellar/stellar-sdk';
-import { SupabaseClient } from '@supabase/supabase-js';
+import { PrismaClient } from '@prisma/client';
 
 /**
  * Transaction Relay Service
@@ -32,10 +32,10 @@ export interface TransactionStatus {
 }
 
 export class TxRelayService {
-    private supabase: SupabaseClient;
+    private prisma: PrismaClient;
 
-    constructor(supabaseClient: SupabaseClient) {
-        this.supabase = supabaseClient;
+    constructor(prismaClient: PrismaClient) {
+        this.prisma = prismaClient;
     }
 
     /**
@@ -100,7 +100,7 @@ export class TxRelayService {
 
     /**
      * Record transaction in database for indexing
-     * @param userId User ID
+     * @param walletAddress Wallet Address (ID)
      * @param hash Transaction hash
      * @param fromAddress Source address
      * @param toAddress Destination address
@@ -108,7 +108,7 @@ export class TxRelayService {
      * @param assetCode Asset code
      */
     async recordTransaction(
-        userId: string,
+        walletAddress: string,
         hash: string,
         fromAddress: string,
         toAddress: string,
@@ -116,22 +116,28 @@ export class TxRelayService {
         assetCode: string = 'XLM',
         assetIssuer?: string
     ): Promise<void> {
-        const { error } = await this.supabase
-            .from('transactions')
-            .insert({
-                user_id: userId,
-                tx_hash: hash,
-                from_address: fromAddress,
-                to_address: toAddress,
-                amount,
-                asset_code: assetCode,
-                asset_issuer: assetIssuer,
-                tx_type: fromAddress === toAddress ? 'payment_in' : 'payment_out',
-                status: 'processing',
-                created_at: new Date().toISOString(),
+        try {
+            // Check if transaction already exists
+            const existing = await this.prisma.unifiedTransaction.findFirst({
+                where: { txHash: hash }
             });
+            
+            if (existing) return;
 
-        if (error) {
+            await this.prisma.unifiedTransaction.create({
+                data: {
+                    walletAddress: walletAddress,
+                    txHash: hash,
+                    ledger: 'ON_CHAIN',
+                    type: fromAddress === walletAddress ? 'PAYMENT' : 'RECEIVED',
+                    asset: assetCode,
+                    amount: parseFloat(amount),
+                    status: 'PENDING',
+                    fromAddress: fromAddress,
+                    toAddress: toAddress,
+                }
+            });
+        } catch (error) {
             console.error('Failed to record transaction:', error);
         }
     }

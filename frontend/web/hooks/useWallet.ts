@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabaseClient';
+import { isConnected, getAddress, requestAccess } from "@stellar/freighter-api";
+import { walletAuth } from '@/lib/lumenVault/walletAuth';
 
-/**
- * Simplified wallet hook for custodial-only wallet system
- * No external wallet connections - all wallets are managed server-side
- */
+export type WalletType = 'lumenvault' | 'freighter' | 'internal' | null;
+
 export function useWallet() {
     const [address, setAddress] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
@@ -75,12 +75,34 @@ export function useWallet() {
 
     const disconnect = async () => {
         setLoading(true);
+        setError(null);
         try {
-            await supabase.auth.signOut();
-            setAddress(null);
-            setUser(null);
-        } catch (e: any) {
-            setError(e.message || "Failed to sign out");
+            const checkConnection = async () => {
+                const timeout = new Promise<{ isConnected: boolean }>((resolve) => setTimeout(() => resolve({ isConnected: false }), 2000));
+
+                const connection = isConnected();
+                return Promise.race([connection, timeout]);
+            };
+
+            const connected = await checkConnection();
+
+            if (!connected.isConnected) {
+
+                setError("Freighter not detected. Please install it.");
+                return false;
+            }
+            const accessResult = await requestAccess();
+            if (accessResult.error) {
+                setError(accessResult.error as string);
+                return false;
+            }
+            setAddress(accessResult.address);
+            setWalletType('freighter');
+            localStorage.setItem('walletType', 'freighter');
+            return true;
+        } catch (e: unknown) {
+            setError(e instanceof Error ? e.message : "Failed to connect Freighter");
+            return false;
         } finally {
             setLoading(false);
         }

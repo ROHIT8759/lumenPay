@@ -43,25 +43,66 @@ export const ASSETS = {
 
 export const API = {
   
-  BASE_URL: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
+  BASE_URL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001',
 
-  
+  // Auth endpoints
   AUTH: {
-    NONCE: '/api/wallet/auth/nonce',
-    VERIFY: '/api/wallet/auth/verify',
-    SESSION: '/api/wallet/auth/session',
+    NONCE: '/api/auth/nonce',
+    VERIFY: '/api/auth/verify',
+    SESSION: '/api/auth/session',
   },
 
-  
+  // Transaction endpoints (on-chain)
   TX: {
-    BUILD: '/api/wallet/tx/build',
-    SUBMIT: '/api/wallet/tx/submit',
+    BUILD: '/api/transactions/build-payment',
+    SUBMIT: '/api/transactions/submit',
+    STATUS: '/api/transactions', // /:hash/status
   },
 
-  
+  // Off-chain ledger endpoints
+  LEDGER: {
+    BALANCE: '/api/ledger/balance',
+    TRANSFER: '/api/ledger/transfer',
+    TRANSACTIONS: '/api/ledger/transactions',
+  },
+
+  // Ramp endpoints
+  RAMP: {
+    ON_CREATE: '/api/ramp/on/create',
+    ON_STATUS: '/api/ramp/on', // /:id
+    OFF_CREATE: '/api/ramp/off/create',
+    OFF_STATUS: '/api/ramp/off', // /:id
+    HISTORY: '/api/ramp/history',
+  },
+
+  // Escrow endpoints
+  ESCROW: {
+    BUILD_LOCK: '/api/escrow/build-lock',
+    BUILD_RELEASE: '/api/escrow/build-release',
+    STATUS: '/api/escrow', // /:loanId
+  },
+
+  // KYC endpoints
   KYC: {
     DIDIT_START: '/api/kyc/didit',
     DIDIT_STATUS: '/api/kyc/didit',
+  },
+
+  // Stocks endpoints
+  STOCKS: {
+    LIST: '/api/stocks/list',
+    QUOTE: '/api/stocks/quote', // /:symbol
+    BUY: '/api/stocks/buy',
+    SELL: '/api/stocks/sell',
+    PORTFOLIO: '/api/stocks/portfolio',
+  },
+
+  // Telegram endpoints
+  TELEGRAM: {
+    LINK_REQUEST: '/api/telegram/link/request',
+    LINK_VERIFY: '/api/telegram/link/verify',
+    UNLINK: '/api/telegram/unlink',
+    STATUS: '/api/telegram/status',
   },
 };
 

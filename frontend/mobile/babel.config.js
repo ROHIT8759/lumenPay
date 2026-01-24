@@ -9,6 +9,9 @@ module.exports = function (api) {
     
     return {
         presets: ['babel-preset-expo'],
-        plugins,
+        plugins: [
+            'nativewind/babel',
+            'react-native-reanimated/plugin',
+        ],
     };
 };

@@ -4,26 +4,32 @@
     "description": "LumenPay backend - Non-custodial transaction orchestration",
     "main": "server.ts",
     "scripts": {
-        "dev": "ts-node-dev --respawn --transpile-only server.ts",
+        "dev": "tsx watch server.ts",
         "build": "tsc",
         "start": "node -r dotenv/config dist/server.js",
         "start:indexer": "node -r dotenv/config dist/workers/indexer.js",
-        "indexer": "ts-node-dev --respawn workers/indexer.ts"
+        "indexer": "tsx watch workers/indexer.ts"
     },
     "dependencies": {
+        "@prisma/client": "5.10.0",
         "@stellar/stellar-sdk": "^12.3.0",
         "@supabase/supabase-js": "^2.91.1",
+        "@types/pg": "^8.16.0",
         "cors": "^2.8.6",
         "dotenv": "^16.6.1",
         "express": "^4.22.1",
-        "jsonwebtoken": "^9.0.3"
+        "jsonwebtoken": "^9.0.3",
+        "pg": "^8.17.2",
+        "prisma": "5.10.0"
     },
     "devDependencies": {
         "@types/cors": "^2.8.17",
         "@types/express": "^4.17.21",
         "@types/jsonwebtoken": "^9.0.5",
         "@types/node": "^20.10.0",
+        "ts-node": "^10.9.2",
         "ts-node-dev": "^2.0.0",
+        "tsx": "^4.21.0",
         "typescript": "^5.3.3"
     }
 }

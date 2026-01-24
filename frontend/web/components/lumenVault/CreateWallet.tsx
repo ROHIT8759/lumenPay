@@ -8,8 +8,7 @@ import { secureStorage } from '@/lib/lumenVault/secureStorage';
 import { networkProvider } from '@/lib/lumenVault/networkProvider'; 
 import { useWallet } from './WalletProvider';
 import { Copy, Eye, EyeOff, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
-
-
+import { walletAuth } from '@/lib/lumenVault/walletAuth';
 
 export function CreateWallet() {
     const { refreshState } = useWallet();
@@ -75,9 +74,11 @@ export function CreateWallet() {
             
             await networkProvider.fundTestnetAccount(createdWallet.publicKey);
 
-            
-            await secureStorage.storeSession(createdWallet.publicKey);
-
+            // Register with backend and sign in
+            const authResult = await walletAuth.signIn(walletData, passphrase);
+            if (!authResult.success) {
+                throw new Error(authResult.error || 'Failed to register with backend');
+            }
             
             await refreshState();
 
