@@ -2,7 +2,7 @@ import dotenv from 'dotenv';
 dotenv.config({ path: '../.env' }); // Load from backend/.env
 
 import { Router, Request, Response } from 'express';
-import { createClient } from '@supabase/supabase-js';
+import { PrismaClient } from '@prisma/client';
 import { AuthService } from '../services/authService';
 import { tokenService } from '../services/tokenService';
 
@@ -15,13 +15,8 @@ import { tokenService } from '../services/tokenService';
  */
 
 const router = Router();
-
-const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
-
-const authService = new AuthService(supabase);
+const prisma = new PrismaClient();
+const authService = new AuthService(prisma);
 
 /**
  * GET /auth/nonce
@@ -96,6 +91,7 @@ router.post('/verify', async (req: Request, res: Response) => {
             user: {
                 id: userId,
                 publicKey,
+                address: publicKey, // Alias for frontend compatibility
             },
         });
     } catch (error: any) {

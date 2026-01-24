@@ -5,6 +5,11 @@ import { motion } from 'framer-motion';
 import { Scan, Send, Banknote, TrendingUp, X, AlertCircle, CheckCircle, Loader } from 'lucide-react';
 import GlassCard from '@/components/ui/GlassCard';
 import jsQR from 'jsqr';
+import { signTransaction } from '@stellar/freighter-api';
+import { API } from '@/lib/config';
+import { walletService } from '@/lib/walletService';
+
+const API_URL = API.BASE_URL;
 
 
 
@@ -12,13 +17,16 @@ import jsQR from 'jsqr';
 
 async function callQuickActionAPI(actionType: string, payload: any) {
     const userId = localStorage.getItem('userId');
-    if (!userId) throw new Error('Not authenticated');
+    const token = localStorage.getItem('authToken');
+    
+    if (!userId || !token) throw new Error('Not authenticated');
 
     const response = await fetch('/api/quick-actions', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
             'x-user-id': userId,
+            'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
             action_type: actionType,
@@ -458,6 +466,7 @@ function PayIdModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void 
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [resolved, setResolved] = useState<any>(null);
+    const [step, setStep] = useState<'resolve' | 'amount' | 'signing' | 'success'>('resolve');
 
     const handleResolve = async () => {
         if (!recipient) {
@@ -487,17 +496,72 @@ function PayIdModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void 
         }
 
         setLoading(true);
+        setStep('signing');
         try {
-            const result = await callQuickActionAPI('pay_id', {
-                action: 'send',
-                recipientAddress: resolved.address,
-                amountXLM: amount,
+            // Get the user's public key from localStorage
+            const walletType = localStorage.getItem('walletType');
+            const token = localStorage.getItem('authToken');
+            
+            // Determine sender address based on wallet type
+            let senderAddress: string | null = null;
+            
+            if (walletType === 'freighter') {
+                // For Freighter, we need to get the address
+                const { getAddress } = await import('@stellar/freighter-api');
+                const addressResult = await getAddress();
+                if (addressResult.error) throw new Error(addressResult.error);
+                senderAddress = addressResult.address;
+            } else {
+                throw new Error('Please connect a wallet first');
+            }
+
+            if (!senderAddress) {
+                throw new Error('No wallet connected');
+            }
+
+            // 1. Build unsigned transaction using local wallet service
+            const buildResult = await walletService.buildPaymentTransaction({
+                sourcePublicKey: senderAddress,
+                destinationPublicKey: resolved.address,
+                amount: amount,
+                asset: 'native', // XLM
             });
 
-            alert(`Payment sent! Hash: ${result.txHash}`);
-            onClose();
+            if (buildResult.error) {
+                throw new Error(buildResult.error);
+            }
+
+            // 2. Sign with Freighter
+            const signResult = await signTransaction(buildResult.transaction.xdr, {
+                networkPassphrase: buildResult.transaction.networkPassphrase,
+            });
+
+            if (signResult.error) {
+                throw new Error(signResult.error);
+            }
+
+            // 3. Submit signed transaction
+            const submitResult = await walletService.submitSignedTransaction(
+                signResult.signedTxXdr,
+                token
+            );
+
+            if (!submitResult.success) {
+                throw new Error(submitResult.error || 'Transaction submission failed');
+            }
+
+            setStep('success');
+            setTimeout(() => {
+                onClose();
+                setStep('resolve');
+                setRecipient('');
+                setAmount('');
+                setResolved(null);
+            }, 2000);
+
         } catch (err: any) {
             setError(err.message);
+            setStep('amount');
         } finally {
             setLoading(false);
         }

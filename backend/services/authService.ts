@@ -1,4 +1,4 @@
-import { SupabaseClient } from '@supabase/supabase-js';
+import { PrismaClient } from '@prisma/client';
 import { randomBytes } from 'crypto';
 
 /**
@@ -22,10 +22,10 @@ export interface VerifyResult {
 }
 
 export class AuthService {
-    private supabase: SupabaseClient;
+    private prisma: PrismaClient;
 
-    constructor(supabaseClient: SupabaseClient) {
-        this.supabase = supabaseClient;
+    constructor(prismaClient: PrismaClient) {
+        this.prisma = prismaClient;
     }
 
     /**
@@ -43,20 +43,14 @@ export class AuthService {
         const nonce = randomBytes(32).toString('hex');
         const expiresAt = new Date(Date.now() + NONCE_EXPIRY_MINUTES * 60 * 1000);
 
-        // Store nonce in database (upsert to handle multiple requests from same wallet)
-        const { error } = await this.supabase
-            .from('auth_nonces')
-            .upsert({
-                public_key: publicKey,
+        // Store nonce in database (create new nonce record)
+        await this.prisma.authNonce.create({
+            data: {
+                walletAddress: publicKey,
                 nonce,
-                expires_at: expiresAt.toISOString(),
-            }, {
-                onConflict: 'public_key'
-            });
-
-        if (error) {
-            throw new Error(`Failed to store nonce: ${error.message}`);
-        }
+                expiresAt,
+            },
+        });
 
         return { nonce, expiresAt };
     }
@@ -74,35 +68,27 @@ export class AuthService {
         nonce: string
     ): Promise<VerifyResult> {
         // Retrieve stored nonce from database
-        const { data: nonceData, error } = await this.supabase
-            .from('auth_nonces')
-            .select('nonce, expires_at')
-            .eq('public_key', publicKey)
-            .single();
+        // Find the specific nonce that matches the wallet and nonce string
+        const nonceData = await this.prisma.authNonce.findFirst({
+            where: {
+                walletAddress: publicKey,
+                nonce: nonce,
+            },
+        });
 
-        if (error || !nonceData) {
+        if (!nonceData) {
             return {
                 success: false,
-                error: 'No nonce found for this public key. Please request a new nonce.',
-            };
-        }
-
-        // Check if nonce matches
-        if (nonceData.nonce !== nonce) {
-            return {
-                success: false,
-                error: 'Nonce mismatch. Please request a new nonce.',
+                error: 'Invalid or expired nonce. Please request a new nonce.',
             };
         }
 
         // Check if nonce is expired
-        const expiresAt = new Date(nonceData.expires_at);
-        if (expiresAt < new Date()) {
+        if (nonceData.expiresAt < new Date()) {
             // Clean up expired nonce
-            await this.supabase
-                .from('auth_nonces')
-                .delete()
-                .eq('public_key', publicKey);
+            await this.prisma.authNonce.delete({
+                where: { id: nonceData.id },
+            });
 
             return {
                 success: false,
@@ -128,10 +114,9 @@ export class AuthService {
             }
 
             // Delete nonce after successful verification (one-time use)
-            await this.supabase
-                .from('auth_nonces')
-                .delete()
-                .eq('public_key', publicKey);
+            await this.prisma.authNonce.delete({
+                where: { id: nonceData.id },
+            });
 
             return {
                 success: true,
@@ -146,73 +131,51 @@ export class AuthService {
     }
 
     /**
-     * Ensure user profile and wallet exist in database
+     * Ensure user profile exists in database
      * Called after successful signature verification
      */
     async ensureUserExists(publicKey: string): Promise<{ userId: string; isNew: boolean }> {
-        // Check if wallet already exists
-        const { data: existingWallet } = await this.supabase
-            .from('wallets')
-            .select('user_id, id')
-            .eq('public_key', publicKey)
-            .single();
+        // Check if user already exists
+        const existingUser = await this.prisma.user.findUnique({
+            where: { walletAddress: publicKey },
+        });
 
-        if (existingWallet) {
-            return { userId: existingWallet.user_id, isNew: false };
+        if (existingUser) {
+            return { userId: existingUser.walletAddress, isNew: false };
         }
 
-        // Create new profile and wallet
-        // Note: We generate a UUID for the user since Supabase auth is deprecated
-        const userId = crypto.randomUUID();
+        // Create new user
+        const newUser = await this.prisma.user.create({
+            data: {
+                walletAddress: publicKey,
+                kycStatus: 'PENDING',
+            },
+        });
+        
+        // Initialize default off-chain balance (USDC)
+        await this.prisma.offchainBalance.create({
+            data: {
+                walletAddress: publicKey,
+                asset: 'USDC',
+                balance: 0.0
+            }
+        });
 
-        // Insert profile
-        const { error: profileError } = await this.supabase
-            .from('profiles')
-            .insert({
-                id: userId,
-                display_name: `User ${publicKey.substring(0, 8)}`,
-                created_at: new Date().toISOString(),
-            });
-
-        if (profileError) {
-            throw new Error(`Failed to create profile: ${profileError.message}`);
-        }
-
-        // Insert wallet
-        const { error: walletError } = await this.supabase
-            .from('wallets')
-            .insert({
-                user_id: userId,
-                public_key: publicKey,
-                wallet_type: 'non-custodial',
-                network: 'testnet',
-                is_primary: true,
-            });
-
-        if (walletError) {
-            // Rollback profile creation
-            await this.supabase.from('profiles').delete().eq('id', userId);
-            throw new Error(`Failed to create wallet: ${walletError.message}`);
-        }
-
-        return { userId, isNew: true };
+        return { userId: newUser.walletAddress, isNew: true };
     }
 
     /**
      * Clean up expired nonces (should be run periodically)
      */
     async cleanupExpiredNonces(): Promise<number> {
-        const { data, error } = await this.supabase
-            .from('auth_nonces')
-            .delete()
-            .lt('expires_at', new Date().toISOString())
-            .select();
+        const result = await this.prisma.authNonce.deleteMany({
+            where: {
+                expiresAt: {
+                    lt: new Date(),
+                },
+            },
+        });
 
-        if (error) {
-            console.error('Failed to cleanup expired nonces:', error);
-            return 0;
-        }
-
-        return data?.length || 0;
+        return result.count;
     }
 }

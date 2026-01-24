@@ -142,12 +142,11 @@ export function WalletProvider({ children }: WalletProviderProps) {
             if (!walletData) return { success: false, error: 'Wallet data not found' };
 
             try {
-                
-                
-                
-
-                
-                
+                // Verify passphrase and sign in to backend
+                const authResult = await walletAuth.signIn(walletData, passphrase);
+                if (!authResult.success) {
+                    throw new Error(authResult.error || 'Authentication failed');
+                }
             } catch (e) {
                 return { success: false, error: 'Invalid passphrase' };
             }

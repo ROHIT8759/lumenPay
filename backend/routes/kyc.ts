@@ -1,12 +1,7 @@
 import { Router, Request, Response } from 'express';
-import { createClient } from '@supabase/supabase-js';
+import prisma from '../lib/prisma';
 
 const router = Router();
-
-const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
 
 const DIDIT_API_URL = 'https://api.didit.me/v1'; // Verify actual URL
 const DIDIT_API_KEY = process.env.DIDIT_API_KEY;
@@ -48,13 +43,13 @@ router.post('/session', async (req: Request, res: Response) => {
 
         const data = await response.json() as any;
 
-        // Store session in Supabase
-        await supabase.from('kyc_sessions').upsert({
-            wallet_address: walletAddress,
-            session_id: data.session_id,
-            status: 'PENDING',
-            verification_url: data.verification_url,
-            created_at: new Date().toISOString()
+        // Store session in Database (User table)
+        await prisma.user.update({
+            where: { walletAddress },
+            data: {
+                kycSessionId: data.session_id,
+                kycStatus: 'IN_PROGRESS',
+            },
         });
 
         res.json({

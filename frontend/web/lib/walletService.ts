@@ -171,11 +171,49 @@ class NonCustodialWalletService {
 
 
 
-  async submitSignedTransaction(signedXdr: string): Promise<{
+  async submitSignedTransaction(signedXdr: string, authToken?: string | null): Promise<{
     txHash: string;
     success: boolean;
     error?: string
   }> {
+    // If authToken is provided, submit via Express Backend
+    if (authToken) {
+      try {
+        const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+        const response = await fetch(`${API_URL}/api/transactions/submit`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': authToken.startsWith('Bearer ') ? authToken : `Bearer ${authToken}`
+          },
+          body: JSON.stringify({ signedXDR: signedXdr })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+           return {
+             txHash: '',
+             success: false,
+             error: data.message || data.error || 'Backend submission failed'
+           };
+        }
+
+        return {
+          txHash: data.hash,
+          success: true
+        };
+      } catch (err: any) {
+        console.error('Backend submission error:', err);
+        // Fallback to Horizon if backend fails? No, user explicitly wants connected backend.
+        return {
+          txHash: '',
+          success: false,
+          error: `Backend submission failed: ${err.message}`
+        };
+      }
+    }
+
     try {
       const transaction = new Transaction(signedXdr, this.networkPassphrase);
 

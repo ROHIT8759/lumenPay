@@ -1,26 +1,26 @@
-// Prisma Schema for LumenPay
-// Using Supabase PostgreSQL as the database host
+// Prisma Schema - LumenPay (Master PRD)
 
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["multiSchema"]
 }
 
 datasource db {
   provider  = "postgresql"
-  url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
+  url       = "postgresql://postgres.jsismwafswmoqwfbfswv:dola%40sohom123%23@aws-1-ap-south-1.pooler.supabase.com:6543/postgres?pgbouncer=true"
+  directUrl = "postgresql://postgres.jsismwafswmoqwfbfswv:dola%40sohom123%23@aws-1-ap-south-1.pooler.supabase.com:5432/postgres"
 }
 
-// =============================================
-// CORE USER MODEL
-// =============================================
+// 1. USER & IDENTITY
 model User {
   walletAddress  String           @id
-  createdAt      DateTime         @default(now())
   kycStatus      KycStatus        @default(PENDING)
+  kycSessionId   String?
+  createdAt      DateTime         @default(now())
   
   // Relations
-  transactions   Transaction[]
+  transactions   UnifiedTransaction[]
+  offchainBalances OffchainBalance[]
   onRampIntents  OnRampIntent[]
   offRampIntents OffRampIntent[]
   stockPositions StockPosition[]
@@ -29,9 +29,45 @@ model User {
   @@map("users")
 }
 
-// =============================================
-// AUTHENTICATION
-// =============================================
+// 2. OFF-CHAIN LEDGER
+model OffchainBalance {
+  id            String   @id @default(uuid())
+  walletAddress String
+  asset         String   @default("USDC") 
+  balance       Float    @default(0.0)
+  updatedAt     DateTime @updatedAt
+
+  user          User     @relation(fields: [walletAddress], references: [walletAddress])
+
+  @@unique([walletAddress, asset])
+  @@map("offchain_balances")
+}
+
+// 3. UNIFIED TRANSACTION (On-chain + Off-chain)
+model UnifiedTransaction {
+  id            String          @id @default(uuid())
+  walletAddress String
+  ledger        LedgerType
+  type          TxType
+  asset         String
+  amount        Float
+  txHash        String?         // Null for internal off-chain txs until settled
+  status        TxStatus        @default(PENDING)
+  createdAt     DateTime        @default(now())
+  
+  // Metadata
+  fromAddress   String?
+  toAddress     String?
+  memo          String?
+
+  user          User            @relation(fields: [walletAddress], references: [walletAddress])
+  
+  @@index([walletAddress])
+  @@index([txHash])
+  @@map("unified_transactions")
+}
+
+// 4. AUTHENTICATION (Wallet Nonces)
 model AuthNonce {
   id            String   @id @default(uuid())
   walletAddress String
@@ -44,37 +80,7 @@ model AuthNonce {
   @@map("auth_nonces")
 }
 
-// =============================================
-// TRANSACTIONS
-// =============================================
-model Transaction {
-  id            String          @id @default(uuid())
-  walletAddress String
-  txHash        String          @unique
-  fromAddress   String
-  toAddress     String
-  amount        String
-  assetCode     String          @default("XLM")
-  assetIssuer   String?
-  type          TransactionType
-  status        TxStatus        @default(PENDING)
-  memo          String?
-  ledger        Int?
-  createdAt     DateTime        @default(now())
-  updatedAt     DateTime        @updatedAt
-  
-  user          User            @relation(fields: [walletAddress], references: [walletAddress])
-  
-  @@index([walletAddress])
-  @@index([txHash])
-  @@index([fromAddress])
-  @@index([toAddress])
-  @@map("transactions")
-}
-
-// =============================================
-// ON-RAMP (INR → Crypto)
-// =============================================
+// 5. ON-RAMP (INR -> Crypto)
 model OnRampIntent {
   id              String     @id @default(uuid())
   walletAddress   String
@@ -83,8 +89,8 @@ model OnRampIntent {
   asset           String     @default("XLM")
   exchangeRate    Float?
   status          RampStatus @default(PENDING)
-  paymentRef      String?    // UPI/Bank reference
-  txHash          String?    // On-chain tx hash
+  paymentRef      String?
+  txHash          String?
   createdAt       DateTime   @default(now())
   updatedAt       DateTime   @updatedAt
   completedAt     DateTime?
@@ -96,9 +102,7 @@ model OnRampIntent {
   @@map("onramp_intents")
 }
 
-// =============================================
-// OFF-RAMP (Crypto → INR)
-// =============================================
+// 6. OFF-RAMP (Crypto -> INR)
 model OffRampIntent {
   id              String     @id @default(uuid())
   walletAddress   String
@@ -110,8 +114,8 @@ model OffRampIntent {
   bankIfsc        String?
   upiId           String?
   status          RampStatus @default(PENDING)
-  lockTxHash      String?    // Escrow lock tx
-  payoutRef       String?    // Bank transfer reference
+  lockTxHash      String?
+  payoutRef       String?
   createdAt       DateTime   @default(now())
   updatedAt       DateTime   @updatedAt
   completedAt     DateTime?
@@ -123,9 +127,7 @@ model OffRampIntent {
   @@map("offramp_intents")
 }
 
-// =============================================
-// STOCKS / RWA POSITIONS
-// =============================================
+// 7. RWA / STOCKS
 model StockPosition {
   id            String   @id @default(uuid())
   walletAddress String
@@ -134,7 +136,7 @@ model StockPosition {
   units         Float
   entryPrice    Float
   currentPrice  Float?
-  txHash        String?  // Token mint/transfer tx
+  txHash        String?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
   
@@ -145,9 +147,7 @@ model StockPosition {
   @@map("stock_positions")
 }
 
-// =============================================
-// TELEGRAM INTEGRATION
-// =============================================
+// 8. TELEGRAM
 model TelegramLink {
   id             String   @id @default(uuid())
   walletAddress  String   @unique
@@ -160,9 +160,7 @@ model TelegramLink {
   @@map("telegram_links")
 }
 
-// =============================================
-// ESCROW (Soroban Contract State Mirror)
-// =============================================
+// 9. ESCROW (Soroban)
 model EscrowPosition {
   id                String       @id @default(uuid())
   loanId            Int          @unique
@@ -183,9 +181,13 @@ model EscrowPosition {
   @@map("escrow_positions")
 }
 
-// =============================================
 // ENUMS
-// =============================================
+enum LedgerType {
+  ON_CHAIN
+  OFF_CHAIN
+  HYBRID
+}
+
 enum KycStatus {
   PENDING
   IN_PROGRESS
@@ -193,7 +195,7 @@ enum KycStatus {
   REJECTED
 }
 
-enum TransactionType {
+enum TxType {
   PAYMENT
   RECEIVED
   ESCROW_LOCK
