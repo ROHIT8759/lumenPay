@@ -1,33 +1,39 @@
-import { Horizon, Keypair, Networks, TransactionBuilder, Asset, Operation } from '@stellar/stellar-sdk';
+import { Horizon, Keypair, Networks, Transaction } from '@stellar/stellar-sdk';
 import * as SecureStore from 'expo-secure-store';
 
+/**
+ * @deprecated Use LumenVault Engine instead.
+ * This module is kept for backward compatibility but should not be used in new code.
+ */
 
 const STELLAR_RPC = 'https://horizon-testnet.stellar.org';
 const NETWORK_PASSPHRASE = Networks.TESTNET;
 
 const server = new Horizon.Server(STELLAR_RPC);
 
-
+// Key storage functions
+/** @deprecated Use LumenVault.KeyManager */
 export const saveKeys = async (secret: string) => {
     await SecureStore.setItemAsync('stellar_secret', secret);
 };
 
+/** @deprecated Use LumenVault.KeyManager */
 export const getKeys = async () => {
     return await SecureStore.getItemAsync('stellar_secret');
 };
 
+/** @deprecated Use LumenVault.KeyManager */
 export const clearKeys = async () => {
     await SecureStore.deleteItemAsync('stellar_secret');
 };
 
-
-
-
+// Wallet management
+/** @deprecated Use LumenVault.createWallet() */
 export const createWallet = async () => {
     const pair = Keypair.random();
     await saveKeys(pair.secret());
 
-    
+    // Attempt to fund via Friendbot
     try {
         await fetch(`https://friendbot.stellar.org?addr=${pair.publicKey()}`);
     } catch (e) {
@@ -40,13 +46,15 @@ export const createWallet = async () => {
     };
 };
 
+/** @deprecated Use LumenVault.KeyManager.retrieveSecret() (Internal) */
 export const loadWallet = async () => {
     const secret = await getKeys();
     if (!secret) return null;
     return Keypair.fromSecret(secret);
 };
 
-
+// Account queries (read-only, safe to call Horizon directly)
+// This can remain as a helper for read-only data
 export const getAccountDetails = async (publicKey: string) => {
     try {
         const account = await server.loadAccount(publicKey);
@@ -65,46 +73,36 @@ export const getAccountDetails = async (publicKey: string) => {
         };
     } catch (e) {
         console.error('Error fetching account:', e);
-        return null; 
+        return null;
     }
 };
 
-
-export const sendPayment = async (
-    recipientId: string,
-    amount: string,
-    assetCode?: string,
-    assetIssuer?: string
-) => {
-    const signerKey = await loadWallet();
-    if (!signerKey) throw new Error('No wallet found');
-
-    const source = await server.loadAccount(signerKey.publicKey());
-
-    let asset = Asset.native();
-    if (assetCode && assetIssuer) {
-        asset = new Asset(assetCode, assetIssuer);
+/**
+ * @deprecated Use LumenVault.signTransaction()
+ */
+export const signTransaction = async (unsignedXDR: string): Promise<string> => {
+    const keypair = await loadWallet();
+    if (!keypair) {
+        throw new Error('No wallet found');
     }
 
-    const tx = new TransactionBuilder(source, {
-        fee: '100', 
-        networkPassphrase: NETWORK_PASSPHRASE,
-    })
-        .addOperation(Operation.payment({
-            destination: recipientId,
-            asset: asset,
-            amount: amount,
-        }))
-        .setTimeout(30)
-        .build();
+    const transaction = new Transaction(unsignedXDR, NETWORK_PASSPHRASE);
+    transaction.sign(keypair);
 
-    tx.sign(signerKey);
+    return transaction.toXDR();
+};
 
-    try {
-        const result = await server.submitTransaction(tx);
-        return { success: true, hash: result.hash };
-    } catch (e: any) {
-        console.error('Payment failed:', e.response?.data?.extras?.result_codes || e.message);
-        throw new Error('Payment failed');
+/**
+ * @deprecated Use LumenVault.signMessage()
+ */
+export const signMessage = async (message: string): Promise<string> => {
+    const keypair = await loadWallet();
+    if (!keypair) {
+        throw new Error('No wallet found');
     }
+
+    const messageBuffer = Buffer.from(message, 'utf-8');
+    const signature = keypair.sign(messageBuffer);
+
+    return signature.toString('base64');
 };

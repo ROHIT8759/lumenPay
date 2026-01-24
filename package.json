@@ -6,9 +6,9 @@
         "backend/*"
     ],
     "scripts": {
-        "web:dev": "npm run dev --workspace=frontend/web",
-        "web:build": "npm run build --workspace=frontend/web",
-        "mobile:start": "npm run start --workspace=frontend/mobile",
+        "web:dev": "pnpm --filter lumenpay dev",
+        "web:build": "pnpm --filter lumenpay build",
+        "mobile:start": "pnpm --filter lumenpay-mobile start",
         "backend:migrate": "echo 'Run migrations from backend/supabase'"
     }
 }
