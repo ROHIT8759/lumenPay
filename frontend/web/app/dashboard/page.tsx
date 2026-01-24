@@ -84,12 +84,12 @@ export default function Home() {
       variants={container}
       initial="hidden"
       animate="show"
-      className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-md sm:max-w-2xl lg:max-w-4xl xl:max-w-6xl space-y-4 sm:space-y-6"
+      className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-md sm:max-w-2xl lg:max-w-4xl xl:max-w-6xl space-y-4 sm:space-y-6 pb-6"
     >
       {/* 1. Quick Actions */}
       <motion.section variants={item}>
-        <h2 className="text-sm font-semibold text-gray-400 mb-3 uppercase tracking-wider">Quick Actions</h2>
-        <div className="grid grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
+        <h2 className="text-xs sm:text-sm font-semibold text-gray-400 mb-2 sm:mb-3 uppercase tracking-wider">Quick Actions</h2>
+        <div className="grid grid-cols-4 gap-2 sm:gap-3 lg:gap-6">
           <ActionBtn
             icon={<Scan />}
             label="Scan QR"
@@ -119,18 +119,18 @@ export default function Home() {
 
       {/* 2. People */}
       <motion.section variants={item}>
-        <div className="flex justify-between items-end mb-3">
-          <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider">People</h2>
+        <div className="flex justify-between items-end mb-2 sm:mb-3">
+          <h2 className="text-xs sm:text-sm font-semibold text-gray-400 uppercase tracking-wider">People</h2>
           <Link href="/people" className="text-xs text-blue-400 hover:text-blue-300">View All</Link>
         </div>
 
         {/* Loading State */}
         {peopleLoading && (
-          <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
+          <div className="flex gap-3 sm:gap-4 overflow-x-auto pb-4 scrollbar-hide -mx-4 px-4">
             {[1, 2, 3, 4, 5, 6, 7].map((i) => (
-              <div key={i} className="flex flex-col items-center gap-2 min-w-[60px] animate-pulse">
-                <div className="w-14 h-14 rounded-full bg-gray-800" />
-                <div className="w-12 h-3 rounded bg-gray-800" />
+              <div key={i} className="flex flex-col items-center gap-2 min-w-[56px] sm:min-w-[60px] animate-pulse">
+                <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-gray-800" />
+                <div className="w-10 sm:w-12 h-2.5 sm:h-3 rounded bg-gray-800" />
               </div>
             ))}
           </div>
@@ -138,50 +138,50 @@ export default function Home() {
 
         {/* Empty State */}
         {!peopleLoading && people.length === 0 && (
-          <GlassCard className="p-6 text-center">
-            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-gray-800 to-black border border-white/10 flex items-center justify-center mx-auto mb-3">
-              <Users className="text-gray-600" size={20} />
+          <GlassCard className="p-4 sm:p-6 text-center">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-gradient-to-br from-gray-800 to-black border border-white/10 flex items-center justify-center mx-auto mb-2 sm:mb-3">
+              <Users className="text-gray-600" size={18} />
             </div>
-            <p className="text-gray-400 text-sm mb-1">No contacts yet</p>
-            <p className="text-gray-600 text-xs">Send or receive money to see people here</p>
+            <p className="text-gray-400 text-xs sm:text-sm mb-1">No contacts yet</p>
+            <p className="text-gray-600 text-[10px] sm:text-xs">Send or receive money to see people here</p>
           </GlassCard>
         )}
 
         {/* People List */}
         {!peopleLoading && people.length > 0 && (
-          <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
+          <div className="flex gap-3 sm:gap-4 overflow-x-auto pb-4 scrollbar-hide -mx-4 px-4">
             {people.map((person) => (
               <Link
                 key={person.id}
                 href={`/people/${encodeURIComponent(person.address)}`}
-                className="flex flex-col items-center gap-2 min-w-[60px] group"
+                className="flex flex-col items-center gap-1.5 sm:gap-2 min-w-[56px] sm:min-w-[60px] group"
               >
                 <div className="relative">
                   {person.avatarUrl ? (
                     <img
                       src={person.avatarUrl}
                       alt={person.name}
-                      className="w-14 h-14 rounded-full object-cover border border-white/10 group-hover:border-blue-500/50 transition-colors"
+                      className="w-12 h-12 sm:w-14 sm:h-14 rounded-full object-cover border border-white/10 group-hover:border-blue-500/50 transition-colors"
                     />
                   ) : (
-                    <div className="w-14 h-14 rounded-full bg-gradient-to-br from-blue-500/20 to-purple-500/20 border border-white/10 group-hover:border-blue-500/50 transition-colors flex items-center justify-center">
-                      <span className="text-sm font-bold text-blue-400">
+                    <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-gradient-to-br from-blue-500/20 to-purple-500/20 border border-white/10 group-hover:border-blue-500/50 transition-colors flex items-center justify-center">
+                      <span className="text-xs sm:text-sm font-bold text-blue-400">
                         {person.name.charAt(0).toUpperCase()}
                       </span>
                     </div>
                   )}
                   {/* Direction indicator */}
-                  <div className={`absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full flex items-center justify-center ${person.direction === 'sent'
+                  <div className={`absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full flex items-center justify-center ${person.direction === 'sent'
                     ? 'bg-red-500/30 text-red-400'
                     : 'bg-green-500/30 text-green-400'
                     }`}>
                     {person.direction === 'sent'
-                      ? <ArrowUpRight size={10} />
-                      : <ArrowDownLeft size={10} />
+                      ? <ArrowUpRight size={8} />
+                      : <ArrowDownLeft size={8} />
                     }
                   </div>
                 </div>
-                <span className="text-xs text-gray-400 truncate w-full text-center group-hover:text-white transition-colors">
+                <span className="text-[10px] sm:text-xs text-gray-400 truncate w-full text-center group-hover:text-white transition-colors">
                   {person.name.split(' ')[0]}
                 </span>
               </Link>
@@ -192,68 +192,68 @@ export default function Home() {
 
       {/* 3. Billing & Retail */}
       <motion.section variants={item}>
-        <div className="flex justify-between items-end mb-3">
-          <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider">Billing & Retail</h2>
+        <div className="flex justify-between items-end mb-2 sm:mb-3">
+          <h2 className="text-xs sm:text-sm font-semibold text-gray-400 uppercase tracking-wider">Billing & Retail</h2>
           <Link href="/billing" className="text-xs text-blue-400 hover:text-blue-300">View All</Link>
         </div>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 lg:gap-4">
           <Link href="/billing/loans">
-            <GlassCard className="flex flex-col items-center justify-center gap-2 py-6" hoverEffect>
-              <Banknote className="text-purple-400" size={24} />
-              <span className="text-sm font-medium">Loans</span>
+            <GlassCard className="flex flex-col items-center justify-center gap-1.5 sm:gap-2 py-4 sm:py-6" hoverEffect>
+              <Banknote className="text-purple-400" size={20} />
+              <span className="text-xs sm:text-sm font-medium">Loans</span>
             </GlassCard>
           </Link>
           <Link href="/billing">
-            <GlassCard className="flex flex-col items-center justify-center gap-2 py-6" hoverEffect>
-              <ShieldCheck className="text-cyan-400" size={24} />
-              <span className="text-sm font-medium">RWA Assets</span>
+            <GlassCard className="flex flex-col items-center justify-center gap-1.5 sm:gap-2 py-4 sm:py-6" hoverEffect>
+              <ShieldCheck className="text-cyan-400" size={20} />
+              <span className="text-xs sm:text-sm font-medium">RWA Assets</span>
             </GlassCard>
           </Link>
           <Link href="/billing/portfolio">
-            <GlassCard className="flex flex-col items-center justify-center gap-2 py-6" hoverEffect>
-              <TrendingUp className="text-green-400" size={24} />
-              <span className="text-sm font-medium">Portfolio</span>
+            <GlassCard className="flex flex-col items-center justify-center gap-1.5 sm:gap-2 py-4 sm:py-6" hoverEffect>
+              <TrendingUp className="text-green-400" size={20} />
+              <span className="text-xs sm:text-sm font-medium">Portfolio</span>
             </GlassCard>
           </Link>
           <Link href="/billing/kyc">
-            <GlassCard className="flex flex-col items-center justify-center gap-2 py-6" hoverEffect>
-              <FileText className="text-amber-400" size={24} />
-              <span className="text-sm font-medium">KYC</span>
+            <GlassCard className="flex flex-col items-center justify-center gap-1.5 sm:gap-2 py-4 sm:py-6" hoverEffect>
+              <FileText className="text-amber-400" size={20} />
+              <span className="text-xs sm:text-sm font-medium">KYC</span>
             </GlassCard>
           </Link>
         </div>
       </motion.section>
 
       {/* 4. Offers & Rewards */}
-      <motion.section variants={item} className="grid grid-cols-2 gap-3">
+      <motion.section variants={item} className="grid grid-cols-2 gap-2 sm:gap-3">
         <GlassCard className="relative overflow-hidden group" hoverEffect>
           <div className="absolute top-0 right-0 p-2 opacity-10 group-hover:opacity-20 transition">
-            <Gift size={60} />
+            <Gift size={48} />
           </div>
-          <div className="flex flex-col gap-1">
-            <Gift className="text-purple-400 mb-2" />
-            <h3 className="font-bold">Rewards</h3>
-            <p className="text-xs text-gray-400">Scratch cards & more</p>
+          <div className="flex flex-col gap-0.5 sm:gap-1">
+            <Gift className="text-purple-400 mb-1 sm:mb-2" size={20} />
+            <h3 className="font-bold text-sm sm:text-base">Rewards</h3>
+            <p className="text-[10px] sm:text-xs text-gray-400">Scratch cards & more</p>
           </div>
         </GlassCard>
         <GlassCard className="relative overflow-hidden group" hoverEffect>
           <div className="absolute top-0 right-0 p-2 opacity-10 group-hover:opacity-20 transition">
-            <Percent size={60} />
+            <Percent size={48} />
           </div>
-          <div className="flex flex-col gap-1">
-            <Percent className="text-green-400 mb-2" />
-            <h3 className="font-bold">Offers</h3>
-            <p className="text-xs text-gray-400">Cashback deals</p>
+          <div className="flex flex-col gap-0.5 sm:gap-1">
+            <Percent className="text-green-400 mb-1 sm:mb-2" size={20} />
+            <h3 className="font-bold text-sm sm:text-base">Offers</h3>
+            <p className="text-[10px] sm:text-xs text-gray-400">Cashback deals</p>
           </div>
         </GlassCard>
         <GlassCard className="col-span-2 flex items-center justify-between" hoverEffect>
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-500/20 rounded-lg text-blue-400">
-              <Users size={20} />
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="p-1.5 sm:p-2 bg-blue-500/20 rounded-lg text-blue-400">
+              <Users size={18} />
             </div>
             <div>
-              <h3 className="font-bold text-sm">Refer & Earn</h3>
-              <p className="text-xs text-gray-400">Invite friends to Steller</p>
+              <h3 className="font-bold text-xs sm:text-sm">Refer & Earn</h3>
+              <p className="text-[10px] sm:text-xs text-gray-400">Invite friends to Steller</p>
             </div>
           </div>
           <ChevronRight size={16} className="text-gray-500" />
@@ -262,7 +262,7 @@ export default function Home() {
 
       {/* 5. Smart Contract Integration */}
       <motion.section variants={item}>
-        <h2 className="text-sm font-semibold text-gray-400 mb-3 uppercase tracking-wider">Smart Contract</h2>
+        <h2 className="text-xs sm:text-sm font-semibold text-gray-400 mb-2 sm:mb-3 uppercase tracking-wider">Smart Contract</h2>
         <ContractInteraction />
       </motion.section>
 
@@ -270,35 +270,35 @@ export default function Home() {
       <motion.section variants={item}>
         <Link href="/transactions">
           <GlassCard className="flex items-center justify-between" hoverEffect>
-            <div className="flex items-center gap-4">
-              <div className="p-2 bg-white/5 rounded-full">
-                <FileText size={20} />
+            <div className="flex items-center gap-3 sm:gap-4">
+              <div className="p-1.5 sm:p-2 bg-white/5 rounded-full">
+                <FileText size={18} />
               </div>
               <div className="flex flex-col">
-                <span className="font-bold">See all transactions</span>
-                <span className="text-xs text-gray-400">Track your spending</span>
+                <span className="font-bold text-sm sm:text-base">See all transactions</span>
+                <span className="text-[10px] sm:text-xs text-gray-400">Track your spending</span>
               </div>
             </div>
-            <ChevronRight className="text-gray-500" />
+            <ChevronRight className="text-gray-500" size={18} />
           </GlassCard>
         </Link>
       </motion.section>
 
-      {/* 6. Balance Card */}
-      <motion.section variants={item} className="pb-8">
+      {/* 7. Balance Card */}
+      <motion.section variants={item} className="pb-4 sm:pb-8">
         <GlassCard className="bg-gradient-to-br from-blue-900/40 to-black border-blue-500/20">
-          <div className="flex justify-between items-start mb-4">
+          <div className="flex justify-between items-start mb-3 sm:mb-4">
             <div>
-              <h2 className="text-sm text-gray-300 mb-1">Total Balance</h2>
-              <div className="text-3xl font-bold font-mono tracking-tight">$12,450.00 <span className="text-sm text-gray-500 font-sans">USDC</span></div>
+              <h2 className="text-xs sm:text-sm text-gray-300 mb-0.5 sm:mb-1">Total Balance</h2>
+              <div className="text-2xl sm:text-3xl font-bold font-mono tracking-tight">$12,450.00 <span className="text-[10px] sm:text-sm text-gray-500 font-sans">USDC</span></div>
             </div>
-            <div className="p-2 bg-blue-500 rounded-lg">
-              <Banknote className="text-white" size={20} />
+            <div className="p-1.5 sm:p-2 bg-blue-500 rounded-lg">
+              <Banknote className="text-white" size={18} />
             </div>
           </div>
           <div className="flex gap-2">
-            <button className="flex-1 py-2 bg-blue-600 hover:bg-blue-500 rounded-lg text-sm font-medium transition-colors">Add Money</button>
-            <button className="flex-1 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-sm font-medium transition-colors">Withdraw</button>
+            <button className="flex-1 py-2 sm:py-2.5 bg-blue-600 hover:bg-blue-500 rounded-lg text-xs sm:text-sm font-medium transition-colors active:scale-95">Add Money</button>
+            <button className="flex-1 py-2 sm:py-2.5 bg-white/10 hover:bg-white/20 rounded-lg text-xs sm:text-sm font-medium transition-colors active:scale-95">Withdraw</button>
           </div>
         </GlassCard>
       </motion.section>
