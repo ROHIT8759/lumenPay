@@ -1,11 +1,15 @@
 import dotenv from 'dotenv';
+import path from 'path';
 import express from 'express';
 import cors from 'cors';
 import authRoutes from './routes/auth';
 import transactionRoutes from './routes/transactions';
 import escrowRoutes from './routes/escrow';
 import kycRoutes from './routes/kyc';
-dotenv.config();
+
+// Load env from root directory
+dotenv.config({ path: path.resolve(__dirname, '../.env') });
+
 const app = express();
 const PORT = process.env.PORT || 3001;
 app.use(cors());

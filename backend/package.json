@@ -11,12 +11,14 @@
         "indexer": "ts-node-dev --respawn workers/indexer.ts"
     },
     "dependencies": {
+        "@prisma/client": "5.10.0",
         "@stellar/stellar-sdk": "^12.3.0",
         "@supabase/supabase-js": "^2.91.1",
         "cors": "^2.8.6",
         "dotenv": "^16.6.1",
         "express": "^4.22.1",
-        "jsonwebtoken": "^9.0.3"
+        "jsonwebtoken": "^9.0.3",
+        "prisma": "5.10.0"
     },
     "devDependencies": {
         "@types/cors": "^2.8.17",
