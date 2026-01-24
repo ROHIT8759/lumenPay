@@ -10,5 +10,13 @@
         "web:build": "pnpm --filter lumenpay build",
         "mobile:start": "pnpm --filter lumenpay-mobile start",
         "backend:migrate": "echo 'Run migrations from backend/supabase'"
+    },
+    "dependencies": {
+        "@react-three/fiber": "^9.5.0",
+        "@types/three": "^0.162.0",
+        "framer-motion": "^11.18.2",
+        "lucide-react": "^0.441.0",
+        "react": "18.2.0",
+        "three": "^0.162.0"
     }
 }

@@ -149,7 +149,7 @@ export class AuthService {
      * Ensure user profile and wallet exist in database
      * Called after successful signature verification
      */
-    async ensureUserExists(publicKey: string): Promise<{ userId: string }> {
+    async ensureUserExists(publicKey: string): Promise<{ userId: string; isNew: boolean }> {
         // Check if wallet already exists
         const { data: existingWallet } = await this.supabase
             .from('wallets')
@@ -158,7 +158,7 @@ export class AuthService {
             .single();
 
         if (existingWallet) {
-            return { userId: existingWallet.user_id };
+            return { userId: existingWallet.user_id, isNew: false };
         }
 
         // Create new profile and wallet
@@ -195,7 +195,7 @@ export class AuthService {
             throw new Error(`Failed to create wallet: ${walletError.message}`);
         }
 
-        return { userId };
+        return { userId, isNew: true };
     }
 
     /**

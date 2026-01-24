@@ -9,6 +9,7 @@ import Animated, {
     Easing,
     runOnJS
 } from 'react-native-reanimated';
+const AnimatedView = Animated.View as any;
 import { useRouter } from 'expo-router';
 import { Check, Key, Shield } from 'lucide-react-native';
 
@@ -82,7 +83,7 @@ export default function WalletSetup() {
     const handleLinkAndFinish = async (pubKey: string) => {
         try {
             setStatus('linking');
-            
+
             // Call backend to register/link this wallet
             // Note: In a real non-custodial flow, we might need to sign a challenge here to prove ownership.
             // For now, we assume the signup endpoint accepts the public key and creates the user record.
@@ -176,16 +177,16 @@ export default function WalletSetup() {
             { }
             <View className="h-40 w-40 items-center justify-center mb-8">
                 { }
-                <Animated.View style={[particleStyle, { position: 'absolute' }]}>
+                <AnimatedView style={[particleStyle, { position: 'absolute' }]}>
                     <View className="w-32 h-32 border-4 border-accent/30 rounded-full border-t-accent" />
-                </Animated.View>
+                </AnimatedView>
 
                 { }
-                <Animated.View style={[lockStyle]}>
+                <AnimatedView style={[lockStyle]}>
                     <View className="w-20 h-20 bg-success rounded-full items-center justify-center shadow-lg shadow-success/50">
                         <Icons.Check size={40} color="white" />
                     </View>
-                </Animated.View>
+                </AnimatedView>
             </View>
 
             { }
@@ -204,7 +205,7 @@ export default function WalletSetup() {
 
             { }
             {status === 'success' && publicKey && (
-                <Animated.View style={keyStyle} className="mb-8 px-4">
+                <AnimatedView style={keyStyle} className="mb-8 px-4">
                     <View className="bg-surface/50 rounded-xl p-4 border border-accent/20">
                         <View className="flex-row items-center gap-2 mb-2">
                             <Icons.Key size={16} color="#00E5FF" />
@@ -214,7 +215,7 @@ export default function WalletSetup() {
                             {publicKey}
                         </Text>
                     </View>
-                </Animated.View>
+                </AnimatedView>
             )}
 
             { }
@@ -224,7 +225,7 @@ export default function WalletSetup() {
             </View>
 
             { }
-            <Animated.View style={[buttonStyle, { width: '100%' }]}>
+            <AnimatedView style={[buttonStyle, { width: '100%' }]}>
                 {status === 'error' ? (
                     <TouchableOpacity
                         activeOpacity={0.8}
@@ -246,7 +247,7 @@ export default function WalletSetup() {
                 <Text className="text-gray-500 text-center mt-6 text-xs">
                     By creating a wallet, you agree to manage your own keys responsibly.
                 </Text>
-            </Animated.View>
+            </AnimatedView>
 
             { }
             <TouchableOpacity

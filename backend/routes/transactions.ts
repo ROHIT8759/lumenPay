@@ -152,6 +152,47 @@ router.get('/:hash/status', async (req: AuthenticatedRequest, res: Response) => 
 });
 
 /**
+ * GET /transactions/user/:publicKey
+ * Get all transactions for a user by their public key
+ * Requires authentication
+ */
+router.get('/user/:publicKey', authenticate, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+        const { publicKey } = req.params;
+
+        if (!publicKey) {
+            return res.status(400).json({
+                error: 'Missing public key',
+            });
+        }
+
+        // Query transactions where user is sender or receiver
+        const { data: transactions, error } = await supabase
+            .from('transactions')
+            .select('*')
+            .or(`from_address.eq.${publicKey},to_address.eq.${publicKey}`)
+            .order('created_at', { ascending: false })
+            .limit(100);
+
+        if (error) {
+            throw new Error(`Database error: ${error.message}`);
+        }
+
+        res.json({
+            success: true,
+            transactions: transactions || [],
+            count: transactions?.length || 0,
+        });
+    } catch (error: any) {
+        console.error('Get user transactions error:', error);
+        res.status(500).json({
+            error: 'Failed to get transactions',
+            message: error.message,
+        });
+    }
+});
+
+/**
  * GET /transactions/account/:publicKey
  * Get account balances (convenience endpoint)
  */

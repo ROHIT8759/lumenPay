@@ -12,7 +12,9 @@ import Animated, {
 } from 'react-native-reanimated';
 import { FadeInUp, FadeInDown } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
-import { LinearGradient } from 'expo-linear-gradient';
+import { LinearGradient as ExpoLinearGradient } from 'expo-linear-gradient';
+const LinearGradient = ExpoLinearGradient as any;
+const AnimatedView = Animated.View as any;
 import { Globe, ShieldCheck, Zap, Wallet, ArrowRight } from 'lucide-react-native';
 
 const Icons = {
@@ -58,13 +60,13 @@ export default function SplashScreen() {
 
     return (
         <View style={styles.container}>
-            <Animated.View entering={FadeInUp.delay(200).duration(1000)} style={styles.header}>
+            <AnimatedView entering={FadeInUp.delay(200).duration(1000)} style={styles.header}>
                 <View style={styles.iconContainer}>
                     <Icons.Globe color="#00E5FF" size={32} />
                 </View>
                 <Text style={styles.title}>Lumen<Text style={styles.highlight}>Vault</Text></Text>
                 <Text style={styles.subtitle}>The Future of Smart Payments</Text>
-            </Animated.View>
+            </AnimatedView>
 
             <View style={styles.featureContainer}>
                 {[
@@ -72,7 +74,7 @@ export default function SplashScreen() {
                     { icon: Icons.Zap, title: "Lightning Fast", desc: "Settlement in seconds." },
                     { icon: Icons.Wallet, title: "Universal", desc: "Pay anyone, anywhere." }
                 ].map((feature, index) => (
-                    <Animated.View
+                    <AnimatedView
                         key={index}
                         entering={FadeInDown.delay(400 + (index * 100)).springify()}
                         style={{ marginBottom: 12 }}
@@ -86,11 +88,11 @@ export default function SplashScreen() {
                                 <Text style={styles.featureDesc}>{feature.desc}</Text>
                             </View>
                         </GlassView>
-                    </Animated.View>
+                    </AnimatedView>
                 ))}
             </View>
 
-            <Animated.View entering={FadeInDown.delay(800).springify()} style={styles.footer}>
+            <AnimatedView entering={FadeInDown.delay(800).springify()} style={styles.footer}>
                 <TouchableOpacity onPress={() => router.push('/wallet-setup')}>
                     <LinearGradient
                         colors={['#00E5FF', '#2979FF']}
@@ -98,7 +100,7 @@ export default function SplashScreen() {
                         end={{ x: 1, y: 0 }}
                         style={styles.button}
                     >
-                        <Animated.View style={[StyleSheet.absoluteFill, { backgroundColor: '#fff', opacity: 0.2 }, glowStyle]} />
+                        <AnimatedView style={[StyleSheet.absoluteFill, { backgroundColor: '#fff', opacity: 0.2 }, glowStyle]} />
                         <Text style={styles.buttonText}>Get Started</Text>
                         <Icons.ArrowRight color="#fff" size={20} />
                     </LinearGradient>
@@ -110,7 +112,7 @@ export default function SplashScreen() {
                 >
                     <Text style={styles.secondaryButtonText}>I already have a wallet</Text>
                 </TouchableOpacity>
-            </Animated.View>
+            </AnimatedView>
         </View>
     );
 }

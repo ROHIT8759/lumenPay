@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView as RNSafeAreaView } from 'react-native-safe-area-context';
+const SafeAreaView = RNSafeAreaView as any;
 import { useRouter } from 'expo-router';
-import { LinearGradient } from 'expo-linear-gradient';
+import { LinearGradient as ExpoLinearGradient } from 'expo-linear-gradient';
+const LinearGradient = ExpoLinearGradient as any;
 import { Bell, ArrowUpRight, ArrowDownLeft, Wallet, Shield, LucideProps } from 'lucide-react-native';
 
 const Icons = {

@@ -1,3 +1,6 @@
+import dotenv from 'dotenv';
+dotenv.config({ path: '../.env' }); // Load from backend/.env
+
 import { Router, Request, Response } from 'express';
 import { createClient } from '@supabase/supabase-js';
 import { AuthService } from '../services/authService';
@@ -119,6 +122,42 @@ router.get('/cleanup', async (req: Request, res: Response) => {
         console.error('Cleanup error:', error);
         res.status(500).json({
             error: 'Cleanup failed',
+            message: error.message,
+        });
+    }
+});
+
+/**
+ * POST /auth/signup
+ * Register a new wallet user (Public Key only)
+ * Used during wallet creation to ensure user record exists.
+ */
+router.post('/signup', async (req: Request, res: Response) => {
+    try {
+        const { publicKey } = req.body;
+
+        if (!publicKey || typeof publicKey !== 'string') {
+            return res.status(400).json({
+                error: 'Missing publicKey parameter',
+            });
+        }
+
+        // Just ensure user exists. No signature required for initial claim (standard for non-custodial)
+        // Ideally we would sign a challenge here too, but for "Create Wallet" flow we just want to init the record.
+        const { userId, isNew } = await authService.ensureUserExists(publicKey);
+
+        res.json({
+            success: true,
+            user: {
+                id: userId,
+                publicKey,
+                isNew
+            }
+        });
+    } catch (error: any) {
+        console.error('Signup error:', error);
+        res.status(500).json({
+            error: 'Signup failed',
             message: error.message,
         });
     }

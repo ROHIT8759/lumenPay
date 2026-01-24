@@ -1,9 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { CameraView, Camera } from 'expo-camera';
+import { CameraView as ExpoCameraView, Camera } from 'expo-camera';
+const CameraView = ExpoCameraView as any;
 import { useRouter } from 'expo-router';
-import { ArrowLeft, Flashlight, Image } from 'lucide-react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { ArrowLeft as ArrowLeftIcon, Flashlight as FlashlightIcon, Image as ImageIcon } from 'lucide-react-native';
+const ArrowLeft = ArrowLeftIcon as any;
+const Flashlight = FlashlightIcon as any;
+const Image = ImageIcon as any;
+import { SafeAreaView as RNSafeAreaView } from 'react-native-safe-area-context';
+const SafeAreaView = RNSafeAreaView as any;
 
 export default function ScanScreen() {
     const router = useRouter();
@@ -20,8 +25,8 @@ export default function ScanScreen() {
 
     const handleBarCodeScanned = ({ type, data }: { type: string, data: string }) => {
         setScanned(true);
-        
-        
+
+
         router.push({ pathname: '/pay/amount', params: { address: data } });
     };
 
@@ -50,7 +55,7 @@ export default function ScanScreen() {
                 enableTorch={flash}
             />
 
-            {}
+            { }
             <View className="flex-1 items-center justify-center">
                 <View className="w-64 h-64 border-2 border-accent rounded-3xl bg-transparent" />
                 <Text className="text-white mt-4 bg-black/40 px-4 py-2 rounded-full overflow-hidden">
