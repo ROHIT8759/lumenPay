@@ -5,7 +5,7 @@ import { jwtVerify } from 'jose';
 import { createClient } from '@supabase/supabase-js';
 
 const JWT_SECRET = new TextEncoder().encode(
-    process.env.WALLET_JWT_SECRET || 'lumenvault-dev-secret-key-change-in-prod'
+    process.env.JWT_SECRET || 'lumenpay-jwt-secret-change-in-production'
 );
 
 const supabase = createClient(

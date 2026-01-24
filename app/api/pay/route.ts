@@ -4,7 +4,7 @@ import { createClient } from "@supabase/supabase-js";
 import { NextRequest, NextResponse } from "next/server";
 import {
   buildPaymentTransaction,
-  signAndSubmitTransaction,
+  submitSignedTransaction,
   recordTransaction,
   resolvePayId,
   getWalletForUser,
@@ -44,13 +44,13 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { action } = body;
 
-    
+
     const userId = req.headers.get("x-user-id");
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    
+
     if (!checkRateLimit(userId)) {
       return NextResponse.json(
         { error: "Rate limit exceeded. Try again later." },
@@ -78,7 +78,7 @@ async function initiatePayment(userId: string, data: any) {
   try {
     const { recipientAddress, amount, asset, memo } = data;
 
-    
+
     if (!recipientAddress || !amount || !asset) {
       return NextResponse.json(
         { error: 'Missing required fields' },
@@ -86,16 +86,18 @@ async function initiatePayment(userId: string, data: any) {
       );
     }
 
-    
-    const publicKey = await walletService.getWalletPublicKey(userId);
-    if (!publicKey) {
+
+
+    const wallet = await getWalletForUser(userId);
+    if (!wallet || !wallet.publicKey) {
       return NextResponse.json(
         { error: 'Wallet not found' },
         { status: 404 }
       );
     }
+    const publicKey = wallet.publicKey;
 
-    
+
     const { data: kycData } = await supabase
       .from('kyc_status')
       .select('is_verified')
@@ -109,7 +111,7 @@ async function initiatePayment(userId: string, data: any) {
       );
     }
 
-    
+
     const { data: profile } = await supabase
       .from('profiles')
       .select('daily_limit, spending_today')
@@ -129,20 +131,22 @@ async function initiatePayment(userId: string, data: any) {
       );
     }
 
-    
-    const txResult = await walletService.buildPaymentTransaction({
-      sourcePublicKey: publicKey,
-      destinationPublicKey: recipientAddress,
-      amount,
-      asset: asset === 'usdc' ? 'usdc' : 'native',
-      memo
-    });
 
-    if (txResult.error) {
-      return NextResponse.json({ error: txResult.error }, { status: 400 });
+
+    let xdr = '';
+    try {
+      xdr = await buildPaymentTransaction({
+        fromPublicKey: publicKey,
+        toPublicKey: recipientAddress,
+        amount,
+        assetCode: asset === 'usdc' ? 'USDC' : 'XLM',
+        memo
+      });
+    } catch (buildError: any) {
+      return NextResponse.json({ error: buildError.message }, { status: 400 });
     }
 
-    
+
     const { data: senderProfile } = await supabase
       .from('profiles')
       .select('display_name, full_name')
@@ -151,7 +155,7 @@ async function initiatePayment(userId: string, data: any) {
 
     const senderDisplayName = senderProfile?.display_name || senderProfile?.full_name || null;
 
-    
+
     const { data: txData, error: txError } = await supabase
       .from('transactions')
       .insert({
@@ -164,7 +168,7 @@ async function initiatePayment(userId: string, data: any) {
         sender_display_name: senderDisplayName,
         memo: memo,
         status: 'pending',
-        meta_data: { xdr: txResult.xdr }
+        meta_data: { xdr: xdr }
       })
       .select('id')
       .single();
@@ -175,7 +179,7 @@ async function initiatePayment(userId: string, data: any) {
 
     return NextResponse.json({
       transactionId: txData.id,
-      xdr: txResult.xdr,
+      xdr: xdr,
       message: 'Transaction ready for confirmation'
     });
   } catch (error: any) {
@@ -196,7 +200,7 @@ async function confirmPayment(userId: string, data: any) {
       );
     }
 
-    
+
     const { data: tx, error: txError } = await supabase
       .from('transactions')
       .select('*')
@@ -212,14 +216,22 @@ async function confirmPayment(userId: string, data: any) {
       );
     }
 
-    
-    const submitResult = await walletService.signAndSubmitTransaction({
-      userId,
-      transactionXdr: tx.meta_data.xdr
-    });
+
+
+    const { signedXdr } = data;
+
+    if (!signedXdr) {
+      return NextResponse.json(
+        { error: 'Signed XDR required' },
+        { status: 400 }
+      );
+    }
+
+    // We strictly use the signed XDR from the client
+    const submitResult = await submitSignedTransaction(signedXdr);
 
     if (submitResult.error) {
-      
+
       await supabase
         .from('transactions')
         .update({
@@ -234,11 +246,12 @@ async function confirmPayment(userId: string, data: any) {
       );
     }
 
-    
+
     const { error: updateError } = await supabase
       .from('transactions')
       .update({
-        tx_hash: submitResult.txHash,
+        stellar_tx_hash: submitResult.hash,
+        tx_hash: submitResult.hash,
         status: 'processing',
         confirmed_at: new Date().toISOString()
       })
@@ -248,7 +261,7 @@ async function confirmPayment(userId: string, data: any) {
       console.error('Update error:', updateError);
     }
 
-    
+
     await supabase
       .from('profiles')
       .update({
@@ -256,7 +269,7 @@ async function confirmPayment(userId: string, data: any) {
       })
       .eq('id', userId);
 
-    
+
     await supabase
       .from('contacts')
       .upsert({
@@ -269,7 +282,7 @@ async function confirmPayment(userId: string, data: any) {
 
     return NextResponse.json({
       success: true,
-      txHash: submitResult.txHash,
+      txHash: submitResult.hash,
       message: 'Payment submitted to Stellar network'
     });
   } catch (error: any) {
@@ -304,7 +317,7 @@ async function getPaymentStatus(userId: string, data: any) {
       );
     }
 
-    
+
     if (tx.status === 'processing' && tx.tx_hash) {
       const txDetails = await walletService.getTransactionDetails(tx.tx_hash);
       if (txDetails) {

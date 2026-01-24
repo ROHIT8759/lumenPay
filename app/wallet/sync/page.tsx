@@ -1,13 +1,4 @@
-/**
- * Wallet Sync Page
- * 
- * Enables QR-based wallet sync between devices.
- * - Export: Show QR code containing encrypted wallet
- * - Import: Scan QR code from another device
- */
-
 'use client';
-
 import { useState, useEffect } from 'react';
 import { useLumenVault } from '@/hooks/useLumenVault';
 import {
@@ -29,21 +20,15 @@ import {
     AlertCircle,
     RefreshCw
 } from 'lucide-react';
-
 type Mode = 'select' | 'export' | 'import';
-
 export default function WalletSyncPage() {
     const [state, actions] = useLumenVault();
     const [mode, setMode] = useState<Mode>('select');
-
-    // Export state
     const [exportPin, setExportPin] = useState('');
     const [exportPassphrase, setExportPassphrase] = useState('');
     const [qrPayload, setQrPayload] = useState('');
     const [isGenerating, setIsGenerating] = useState(false);
     const [copied, setCopied] = useState(false);
-
-    // Import state
     const [importData, setImportData] = useState('');
     const [importPin, setImportPin] = useState('');
     const [newPassphrase, setNewPassphrase] = useState('');
@@ -51,8 +36,6 @@ export default function WalletSyncPage() {
     const [importResult, setImportResult] = useState<{ success: boolean; error?: string } | null>(null);
 
     const [error, setError] = useState('');
-
-    // Generate QR for export
     const handleGenerateQR = async () => {
         setError('');
         setIsGenerating(true);

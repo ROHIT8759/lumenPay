@@ -14,71 +14,41 @@ const NETWORK_PASSPHRASE = Networks.TESTNET;
 
 
 
-function encryptKey(secretKey: string): { encrypted: string; iv: string } {
-  const iv = crypto.randomBytes(16);
-  const cipher = crypto.createCipheriv(
-    "aes-256-gcm",
-    Buffer.from(ENCRYPTION_KEY, "hex"),
-    iv
-  );
 
-  let encrypted = cipher.update(secretKey, "utf8", "hex");
-  encrypted += cipher.final("hex");
+// -- CUSTODIAL KEY MANAGEMENT REMOVED --
+// The backend no longer stores or manages private keys.
+// All signing must happen on the client side (LumenVault).
 
-  const authTag = cipher.getAuthTag();
-  const combined = encrypted + authTag.toString("hex");
-
-  return {
-    encrypted: combined,
-    iv: iv.toString("hex"),
-  };
-}
-
-function decryptKey(encrypted: string, iv: string): string {
-  const authTag = Buffer.from(encrypted.slice(-32), "hex");
-  const encryptedData = encrypted.slice(0, -32);
-
-  const decipher = crypto.createDecipheriv(
-    "aes-256-gcm",
-    Buffer.from(ENCRYPTION_KEY, "hex"),
-    Buffer.from(iv, "hex")
-  );
-
-  decipher.setAuthTag(authTag);
-
-  let decrypted = decipher.update(encryptedData, "hex", "utf8");
-  decrypted += decipher.final("utf8");
-
-  return decrypted;
-}
-
-
-
-
-
-export async function createWalletForUser(userId: string, email: string) {
+export async function registerUserWallet(userId: string, publicKey: string) {
   try {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("email, full_name")
+      .eq("user_id", userId)
+      .single();
 
-    const keypair = Keypair.random();
+    let payId = "";
+    if (profile?.email) {
+      payId = `${profile.email.split("@")[0]}.${userId.slice(0, 8)}@steller`;
+    } else {
+      // Fallback if no email (shouldn't happen for email auth, but good for safety)
+      payId = `user.${userId.slice(0, 8)}@steller`;
+    }
 
-
-    const { encrypted, iv } = encryptKey(keypair.secret());
-
-
-    const { data, error } = await supabase.from("wallets").insert({
+    const { error } = await supabase.from("wallets").insert({
       user_id: userId,
-      public_key: keypair.publicKey(),
-      encrypted_secret_key: encrypted,
-      encryption_iv: iv,
+      public_key: publicKey,
+      // encrypted_secret_key: null, // intentionally omitted
+      // encryption_iv: null,        // intentionally omitted
       network: "testnet",
     });
 
-    if (error) throw error;
+    if (error) {
+      // Ignore duplicate key error if user already registered same wallet
+      if (error.code !== '23505') throw error;
+    }
 
-
-    const payId = `${email.split("@")[0]}.${userId.slice(0, 8)}@steller`;
-
-
+    // Update PayID
     const { error: profileError } = await supabase
       .from("profiles")
       .update({ pay_id: payId })
@@ -88,24 +58,19 @@ export async function createWalletForUser(userId: string, email: string) {
 
     return {
       success: true,
-      publicKey: keypair.publicKey(),
       payId,
     };
   } catch (error) {
-    console.error("Failed to create wallet:", error);
+    console.error("Failed to register wallet:", error);
     throw error;
   }
 }
-
-
-
-
 
 export async function getWalletForUser(userId: string) {
   try {
     const { data, error } = await supabase
       .from("wallets")
-      .select("*")
+      .select("public_key")
       .eq("user_id", userId)
       .single();
 
@@ -114,31 +79,12 @@ export async function getWalletForUser(userId: string) {
 
     return {
       publicKey: data.public_key,
-      encryptedKey: data.encrypted_secret_key,
-      iv: data.encryption_iv,
     };
   } catch (error) {
     console.error("Failed to get wallet:", error);
     throw error;
   }
 }
-
-export async function getSecretKeyForUser(userId: string): Promise<string> {
-  try {
-    const wallet = await getWalletForUser(userId);
-    if (!wallet) throw new Error("Wallet not found");
-
-    const secretKey = decryptKey(wallet.encryptedKey, wallet.iv);
-    return secretKey;
-  } catch (error) {
-    console.error("Failed to decrypt secret key:", error);
-    throw error;
-  }
-}
-
-
-
-
 
 export async function getBalance(publicKey: string): Promise<string> {
   try {
@@ -172,10 +118,6 @@ export async function getAccountDetails(publicKey: string) {
   }
 }
 
-
-
-
-
 export async function buildPaymentTransaction(params: {
   fromPublicKey: string;
   toPublicKey: string;
@@ -192,7 +134,7 @@ export async function buildPaymentTransaction(params: {
 
     let asset = Asset.native();
     if (params.assetCode && params.assetCode !== "XLM") {
-
+      // TODO: Add support for other assets lookup
       asset = Asset.native();
     }
 
@@ -223,32 +165,26 @@ export async function buildPaymentTransaction(params: {
   }
 }
 
-export async function signAndSubmitTransaction(params: {
-  userId: string;
-  transactionXdr: string;
-}): Promise<{ hash: string; error?: string }> {
+export async function submitSignedTransaction(
+  transactionXdr: string
+): Promise<{ hash: string; error?: string }> {
   try {
-    const secretKey = await getSecretKeyForUser(params.userId);
-    const keypair = Keypair.fromSecret(secretKey);
-
     const server = new Horizon.Server(
       "https://horizon-testnet.stellar.org"
     );
 
-    
-    const transaction = TransactionBuilder.fromXDR(params.transactionXdr, NETWORK_PASSPHRASE);
-
-    
-    transaction.sign(keypair);
-
+    const transaction = TransactionBuilder.fromXDR(transactionXdr, NETWORK_PASSPHRASE);
     const result = await server.submitTransaction(transaction);
 
     return { hash: result.hash };
   } catch (error: any) {
-    console.error("Failed to sign and submit transaction:", error);
-    return { hash: "", error: error.message };
+    // Better error error handling for Horizon errors
+    const errorMessage = error.response?.data?.extras?.result_codes?.operations?.join(', ') || error.message;
+    console.error("Failed to submit transaction:", errorMessage);
+    return { hash: "", error: errorMessage };
   }
 }
+
 
 
 

@@ -66,10 +66,7 @@ const DEFAULT_INTEREST_RATES: Record<number, number> = {
 
 
 class LoanEscrowService {
-    private demoMode: boolean;
-
     constructor() {
-        this.demoMode = process.env.KYC_DEMO_MODE === 'true';
     }
 
     
@@ -119,10 +116,7 @@ class LoanEscrowService {
         const dueDate = new Date();
         dueDate.setDate(dueDate.getDate() + duration_days);
 
-        
-        const escrowTxHash = this.demoMode
-            ? `demo_escrow_${Date.now()}`
-            : await this.lockCollateralOnChain(borrower_wallet, collateral_asset, collateral_amount);
+        const escrowTxHash = await this.lockCollateralOnChain(borrower_wallet, collateral_asset, collateral_amount);
 
         
         const { data, error } = await supabase
@@ -233,8 +227,7 @@ class LoanEscrowService {
             return { success: false, error: 'Loan cannot be liquidated' };
         }
 
-        
-        const liquidationTxHash = `demo_liquidate_${Date.now()}`;
+        const liquidationTxHash = await this.processLiquidationOnChain(loan);
 
         
         const { error } = await supabase
@@ -391,9 +384,6 @@ class LoanEscrowService {
 
     
     
-    
-
-    
     private async lockCollateralOnChain(
         wallet: string,
         asset: string,
@@ -403,8 +393,8 @@ class LoanEscrowService {
         
         
         
-        console.log(`Locking ${amount} ${asset} for wallet ${wallet}`);
-        return `stellar_tx_${Date.now()}`;
+        
+        throw new Error('Soroban escrow contract integration required. Please implement collateral locking via contract call.');
     }
 
     
@@ -413,8 +403,17 @@ class LoanEscrowService {
         
         
         
-        console.log(`Processing repayment for loan ${loan.id}`);
-        return `stellar_repay_${Date.now()}`;
+        
+        throw new Error('Soroban escrow contract integration required. Please implement repayment processing via contract call.');
+    }
+
+    
+    private async processLiquidationOnChain(loan: CollateralizedLoan): Promise<string> {
+        
+        
+        
+        
+        throw new Error('Soroban escrow contract integration required. Please implement liquidation via contract call.');
     }
 
     

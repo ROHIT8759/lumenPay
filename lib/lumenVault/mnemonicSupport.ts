@@ -2,9 +2,6 @@ import { Keypair } from '@stellar/stellar-sdk';
 const WORD_COUNT_12 = 12;
 const WORD_COUNT_24 = 24;
 const STELLAR_PATH = "m/44'/148'/0'";
-/**
- * Generate a random mnemonic phrase
- */
 export function generateStellarMnemonic(wordCount: 12 | 24 = 12): string {
     const entropy = new Uint8Array(wordCount === 12 ? 16 : 32);
     if (typeof window !== 'undefined' && window.crypto) {
