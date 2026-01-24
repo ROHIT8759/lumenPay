@@ -1,12 +1,11 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 html,
 body {
     margin: 0;
     padding: 0;
     background-color: #030014;
     color: #ffffff;
-}
-
-#root {
-    display: flex;
-    flex: 1;
 }

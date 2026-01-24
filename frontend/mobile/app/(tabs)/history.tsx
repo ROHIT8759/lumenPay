@@ -47,9 +47,6 @@ export default function HistoryScreen() {
 
             const publicKey = wallet.publicKey();
 
-            // Fetch transactions from backend
-            // Note: This endpoint would need to be added to backend/routes/transactions.ts
-            // For now, this will show empty state until the user makes transactions
             const response = await fetch(`${API_BASE}/transactions/user/${publicKey}`, {
                 headers: {
                     'Authorization': `Bearer ${token}`,
