@@ -1,0 +1,230 @@
+// Prisma Schema for LumenPay
+// Using Supabase PostgreSQL as the database host
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// =============================================
+// CORE USER MODEL
+// =============================================
+model User {
+  walletAddress  String           @id
+  createdAt      DateTime         @default(now())
+  kycStatus      KycStatus        @default(PENDING)
+  
+  // Relations
+  transactions   Transaction[]
+  onRampIntents  OnRampIntent[]
+  offRampIntents OffRampIntent[]
+  stockPositions StockPosition[]
+  telegramLink   TelegramLink?
+  
+  @@map("users")
+}
+
+// =============================================
+// AUTHENTICATION
+// =============================================
+model AuthNonce {
+  id            String   @id @default(uuid())
+  walletAddress String
+  nonce         String
+  expiresAt     DateTime
+  createdAt     DateTime @default(now())
+  
+  @@index([walletAddress])
+  @@index([nonce])
+  @@map("auth_nonces")
+}
+
+// =============================================
+// TRANSACTIONS
+// =============================================
+model Transaction {
+  id            String          @id @default(uuid())
+  walletAddress String
+  txHash        String          @unique
+  fromAddress   String
+  toAddress     String
+  amount        String
+  assetCode     String          @default("XLM")
+  assetIssuer   String?
+  type          TransactionType
+  status        TxStatus        @default(PENDING)
+  memo          String?
+  ledger        Int?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  
+  user          User            @relation(fields: [walletAddress], references: [walletAddress])
+  
+  @@index([walletAddress])
+  @@index([txHash])
+  @@index([fromAddress])
+  @@index([toAddress])
+  @@map("transactions")
+}
+
+// =============================================
+// ON-RAMP (INR → Crypto)
+// =============================================
+model OnRampIntent {
+  id              String     @id @default(uuid())
+  walletAddress   String
+  inrAmount       Float
+  cryptoAmount    Float?
+  asset           String     @default("XLM")
+  exchangeRate    Float?
+  status          RampStatus @default(PENDING)
+  paymentRef      String?    // UPI/Bank reference
+  txHash          String?    // On-chain tx hash
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+  completedAt     DateTime?
+  
+  user            User       @relation(fields: [walletAddress], references: [walletAddress])
+  
+  @@index([walletAddress])
+  @@index([status])
+  @@map("onramp_intents")
+}
+
+// =============================================
+// OFF-RAMP (Crypto → INR)
+// =============================================
+model OffRampIntent {
+  id              String     @id @default(uuid())
+  walletAddress   String
+  cryptoAmount    Float
+  inrAmount       Float?
+  asset           String     @default("XLM")
+  exchangeRate    Float?
+  bankAccountNo   String?
+  bankIfsc        String?
+  upiId           String?
+  status          RampStatus @default(PENDING)
+  lockTxHash      String?    // Escrow lock tx
+  payoutRef       String?    // Bank transfer reference
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+  completedAt     DateTime?
+  
+  user            User       @relation(fields: [walletAddress], references: [walletAddress])
+  
+  @@index([walletAddress])
+  @@index([status])
+  @@map("offramp_intents")
+}
+
+// =============================================
+// STOCKS / RWA POSITIONS
+// =============================================
+model StockPosition {
+  id            String   @id @default(uuid())
+  walletAddress String
+  symbol        String
+  name          String?
+  units         Float
+  entryPrice    Float
+  currentPrice  Float?
+  txHash        String?  // Token mint/transfer tx
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  user          User     @relation(fields: [walletAddress], references: [walletAddress])
+  
+  @@unique([walletAddress, symbol])
+  @@index([walletAddress])
+  @@map("stock_positions")
+}
+
+// =============================================
+// TELEGRAM INTEGRATION
+// =============================================
+model TelegramLink {
+  id             String   @id @default(uuid())
+  walletAddress  String   @unique
+  telegramUserId String
+  telegramChat   String?
+  linkedAt       DateTime @default(now())
+  
+  user           User     @relation(fields: [walletAddress], references: [walletAddress])
+  
+  @@map("telegram_links")
+}
+
+// =============================================
+// ESCROW (Soroban Contract State Mirror)
+// =============================================
+model EscrowPosition {
+  id                String       @id @default(uuid())
+  loanId            Int          @unique
+  borrowerAddress   String
+  lenderAddress     String
+  collateralToken   String
+  collateralAmount  String
+  loanAmount        String
+  durationSeconds   Int
+  status            EscrowStatus @default(PENDING)
+  lockTxHash        String?
+  releaseTxHash     String?
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+  
+  @@index([borrowerAddress])
+  @@index([lenderAddress])
+  @@map("escrow_positions")
+}
+
+// =============================================
+// ENUMS
+// =============================================
+enum KycStatus {
+  PENDING
+  IN_PROGRESS
+  APPROVED
+  REJECTED
+}
+
+enum TransactionType {
+  PAYMENT
+  RECEIVED
+  ESCROW_LOCK
+  ESCROW_RELEASE
+  ON_RAMP
+  OFF_RAMP
+  STOCK_BUY
+  STOCK_SELL
+}
+
+enum TxStatus {
+  PENDING
+  SUCCESS
+  FAILED
+}
+
+enum RampStatus {
+  PENDING
+  INR_CONFIRMED
+  CRYPTO_LOCKED
+  CRYPTO_SENT
+  INR_SENT
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+enum EscrowStatus {
+  PENDING
+  LOCKED
+  RELEASED
+  LIQUIDATED
+  CANCELLED
+}
