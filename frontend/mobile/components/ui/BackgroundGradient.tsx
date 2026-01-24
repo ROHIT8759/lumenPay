@@ -1,14 +1,15 @@
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
+import { LinearGradient as ExpoLinearGradient } from 'expo-linear-gradient';
+const LinearGradient = ExpoLinearGradient as any;
 
 export default function BackgroundGradient({ children }: { children: React.ReactNode }) {
     return (
         <View style={styles.container}>
-            {}
+            { }
             <View style={[StyleSheet.absoluteFill, { backgroundColor: '#030014' }]} />
 
-            {}
+            { }
             <LinearGradient
                 colors={['rgba(88, 28, 135, 0.4)', 'transparent']}
                 start={{ x: 0.5, y: 0 }}
@@ -17,20 +18,20 @@ export default function BackgroundGradient({ children }: { children: React.React
             />
 
             <LinearGradient
-                colors={['rgba(56, 189, 248, 0.2)', 'transparent']} 
+                colors={['rgba(56, 189, 248, 0.2)', 'transparent']}
                 start={{ x: 0, y: 0.4 }}
                 end={{ x: 0.8, y: 0.8 }}
                 style={[StyleSheet.absoluteFill, { opacity: 0.4 }]}
             />
 
             <LinearGradient
-                colors={['rgba(236, 72, 153, 0.2)', 'transparent']} 
+                colors={['rgba(236, 72, 153, 0.2)', 'transparent']}
                 start={{ x: 1, y: 0.3 }}
                 end={{ x: 0, y: 1 }}
                 style={[StyleSheet.absoluteFill, { opacity: 0.3 }]}
             />
 
-            {}
+            { }
             <View style={{ flex: 1 }}>
                 {children}
             </View>

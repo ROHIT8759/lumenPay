@@ -51,8 +51,8 @@ function WarpStars({ count = 800 }) {
     useEffect(() => {
         currentVelocities.current = velocities;
     }, [velocities]);
-
-    useFrame((_state, delta) => {
+    
+    useFrame((_state: any, delta: number) => {
         if (!mesh.current) return;
 
         const pos = mesh.current.geometry.attributes.position.array as Float32Array;
@@ -131,12 +131,14 @@ function WarpStars({ count = 800 }) {
                     count={count}
                     array={positions}
                     itemSize={3}
+                    args={[positions, 3]}
                 />
                 <bufferAttribute
                     attach="attributes-size"
                     count={count}
                     array={sizes}
                     itemSize={1}
+                    args={[sizes, 1]}
                 />
             </bufferGeometry>
             <pointsMaterial

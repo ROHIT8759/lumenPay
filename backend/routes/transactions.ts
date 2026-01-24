@@ -1,8 +1,8 @@
 import { Router, Response } from 'express';
+import { createClient } from '@supabase/supabase-js';
 import { walletService } from '../services/walletService';
-import { txRelayService } from '../services/txRelayService';
+import { TxRelayService } from '../services/txRelayService';
 import { authenticate, AuthenticatedRequest } from '../middleware/auth';
-import prisma from '../lib/prisma';
 
 /**
  * Transaction Routes
@@ -11,10 +11,16 @@ import prisma from '../lib/prisma';
  * - POST /transactions/build-payment - Build unsigned payment
  * - POST /transactions/submit - Submit signed transaction
  * - GET /transactions/:hash/status - Get transaction status
- * - GET /transactions/user/:publicKey - Get user's transactions
  */
 
 const router = Router();
+
+const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
+
+const txRelayService = new TxRelayService(supabase);
 
 /**
  * POST /transactions/build-payment
@@ -23,7 +29,7 @@ const router = Router();
  */
 router.post('/build-payment', authenticate, async (req: AuthenticatedRequest, res: Response) => {
     try {
-        const { to, amount, assetCode, assetIssuer, memo } = req.body;
+        const { to, amount, assetCode, assetIssuer } = req.body;
         const from = req.user!.publicKey;
 
         if (!to || !amount) {
@@ -38,8 +44,7 @@ router.post('/build-payment', authenticate, async (req: AuthenticatedRequest, re
             to,
             amount,
             assetCode,
-            assetIssuer,
-            memo
+            assetIssuer
         );
 
         res.json({
@@ -65,6 +70,7 @@ router.post('/submit', authenticate, async (req: AuthenticatedRequest, res: Resp
     try {
         const { signedXDR, to, amount, assetCode, assetIssuer } = req.body;
         const from = req.user!.publicKey;
+        const userId = req.user!.userId;
 
         if (!signedXDR) {
             return res.status(400).json({
@@ -95,15 +101,13 @@ router.post('/submit', authenticate, async (req: AuthenticatedRequest, res: Resp
         // Record transaction in database
         if (to && amount) {
             await txRelayService.recordTransaction(
-                from,
+                userId,
                 result.hash!,
                 from,
                 to,
                 amount,
                 assetCode || 'XLM',
-                assetIssuer,
-                'PAYMENT',
-                result.ledger
+                assetIssuer
             );
         }
 
@@ -111,7 +115,6 @@ router.post('/submit', authenticate, async (req: AuthenticatedRequest, res: Resp
             success: true,
             hash: result.hash,
             ledger: result.ledger,
-            explorerUrl: `https://stellar.expert/explorer/testnet/tx/${result.hash}`,
         });
     } catch (error: any) {
         console.error('Submit transaction error:', error);
@@ -138,17 +141,7 @@ router.get('/:hash/status', async (req: AuthenticatedRequest, res: Response) => 
 
         const status = await txRelayService.getTransactionStatus(hash);
 
-        // If transaction is successful, update DB
-        if (status.status === 'success') {
-            await txRelayService.updateTransactionStatus(hash, 'SUCCESS', status.ledger);
-        } else if (status.status === 'failed') {
-            await txRelayService.updateTransactionStatus(hash, 'FAILED');
-        }
-
-        res.json({
-            ...status,
-            explorerUrl: `https://stellar.expert/explorer/testnet/tx/${hash}`,
-        });
+        res.json(status);
     } catch (error: any) {
         console.error('Get transaction status error:', error);
         res.status(500).json({
@@ -166,7 +159,6 @@ router.get('/:hash/status', async (req: AuthenticatedRequest, res: Response) => 
 router.get('/user/:publicKey', authenticate, async (req: AuthenticatedRequest, res: Response) => {
     try {
         const { publicKey } = req.params;
-        const limit = parseInt(req.query.limit as string) || 50;
 
         if (!publicKey) {
             return res.status(400).json({
@@ -174,29 +166,22 @@ router.get('/user/:publicKey', authenticate, async (req: AuthenticatedRequest, r
             });
         }
 
-        const transactions = await txRelayService.getUserTransactions(publicKey, limit);
+        // Query transactions where user is sender or receiver
+        const { data: transactions, error } = await supabase
+            .from('transactions')
+            .select('*')
+            .or(`from_address.eq.${publicKey},to_address.eq.${publicKey}`)
+            .order('created_at', { ascending: false })
+            .limit(100);
 
-        // Transform to frontend format
-        const formattedTransactions = transactions.map(tx => ({
-            id: tx.id,
-            tx_hash: tx.txHash,
-            from_address: tx.fromAddress,
-            to_address: tx.toAddress,
-            amount: tx.amount,
-            asset_code: tx.assetCode,
-            asset_issuer: tx.assetIssuer,
-            type: tx.type,
-            status: tx.status.toLowerCase(),
-            ledger: tx.ledger,
-            memo: tx.memo,
-            created_at: tx.createdAt,
-            explorerUrl: `https://stellar.expert/explorer/testnet/tx/${tx.txHash}`,
-        }));
+        if (error) {
+            throw new Error(`Database error: ${error.message}`);
+        }
 
         res.json({
             success: true,
-            transactions: formattedTransactions,
-            count: formattedTransactions.length,
+            transactions: transactions || [],
+            count: transactions?.length || 0,
         });
     } catch (error: any) {
         console.error('Get user transactions error:', error);
@@ -222,31 +207,6 @@ router.get('/account/:publicKey', async (req: AuthenticatedRequest, res: Respons
         console.error('Get account details error:', error);
         res.status(500).json({
             error: 'Failed to get account details',
-            message: error.message,
-        });
-    }
-});
-
-/**
- * GET /transactions/history/:publicKey
- * Get transaction history directly from Horizon (real-time)
- */
-router.get('/history/:publicKey', async (req: AuthenticatedRequest, res: Response) => {
-    try {
-        const { publicKey } = req.params;
-        const limit = parseInt(req.query.limit as string) || 20;
-
-        const history = await walletService.getTransactionHistory(publicKey, limit);
-
-        res.json({
-            success: true,
-            transactions: history,
-            count: history.length,
-        });
-    } catch (error: any) {
-        console.error('Get transaction history error:', error);
-        res.status(500).json({
-            error: 'Failed to get transaction history',
             message: error.message,
         });
     }

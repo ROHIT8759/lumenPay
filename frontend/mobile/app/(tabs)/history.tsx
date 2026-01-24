@@ -1,11 +1,16 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, FlatList, TouchableOpacity, RefreshControl } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView as RNSafeAreaView } from 'react-native-safe-area-context';
+const SafeAreaView = RNSafeAreaView as any;
 import { useRouter } from 'expo-router';
-import { ArrowUpRight, ArrowDownLeft, RefreshCw } from 'lucide-react-native';
+import { ArrowUpRight as ArrowUpRightIcon, ArrowDownLeft as ArrowDownLeftIcon, RefreshCw as RefreshCwIcon } from 'lucide-react-native';
+const ArrowUpRight = ArrowUpRightIcon as any;
+const ArrowDownLeft = ArrowDownLeftIcon as any;
+const RefreshCw = RefreshCwIcon as any;
+import { loadWallet } from '../../lib/stellar';
+import { authApi } from '../../lib/api/authApi';
 
-
-const API_BASE = 'http://localhost:3000';
+const API_BASE = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3001/api';
 
 interface Transaction {
     id: string;
@@ -24,54 +29,55 @@ export default function HistoryScreen() {
     const [transactions, setTransactions] = useState<Transaction[]>([]);
     const [refreshing, setRefreshing] = useState(false);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
     const fetchTransactions = async () => {
         setRefreshing(true);
+        setError(null);
         try {
-            
-            
-            
+            // Get authenticated token and user's public key
+            const token = await authApi.getStoredToken();
+            const wallet = await loadWallet();
 
-            
-            const mockData: Transaction[] = [
-                {
-                    id: '1',
-                    from: 'GABC...1234',
-                    to: 'GDEF...5678',
-                    amount: '50.00',
-                    assetCode: 'XLM',
-                    type: 'sent',
-                    status: 'success',
-                    hash: 'abc123...',
-                    createdAt: new Date().toISOString(),
-                },
-                {
-                    id: '2',
-                    from: 'GXYZ...9999',
-                    to: 'GABC...1234',
-                    amount: '125.50',
-                    assetCode: 'XLM',
-                    type: 'received',
-                    status: 'success',
-                    hash: 'def456...',
-                    createdAt: new Date(Date.now() - 86400000).toISOString(),
-                },
-                {
-                    id: '3',
-                    from: 'GABC...1234',
-                    to: 'GHIJ...0000',
-                    amount: '25.00',
-                    assetCode: 'USDC',
-                    type: 'sent',
-                    status: 'success',
-                    hash: 'ghi789...',
-                    createdAt: new Date(Date.now() - 172800000).toISOString(),
-                },
-            ];
+            if (!token || !wallet) {
+                setError('Please authenticate first');
+                setTransactions([]);
+                return;
+            }
 
-            setTransactions(mockData);
-        } catch (e) {
+            const publicKey = wallet.publicKey();
+
+            const response = await fetch(`${API_BASE}/transactions/user/${publicKey}`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                },
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to fetch transactions');
+            }
+
+            const data = await response.json();
+
+            // Transform backend data to match frontend interface
+            const transformedTransactions: Transaction[] = (data.transactions || []).map((tx: any) => ({
+                id: tx.id,
+                from: tx.from_address,
+                to: tx.to_address,
+                amount: tx.amount,
+                assetCode: tx.asset_code || 'XLM',
+                type: tx.from_address === publicKey ? 'sent' : 'received',
+                status: tx.status,
+                hash: tx.tx_hash,
+                createdAt: tx.created_at,
+            }));
+
+            setTransactions(transformedTransactions);
+        } catch (e: any) {
             console.error('Failed to fetch transactions:', e);
+            setError(e.message || 'Failed to load transactions');
+            // Show empty state on error
+            setTransactions([]);
         } finally {
             setRefreshing(false);
             setLoading(false);
@@ -99,7 +105,7 @@ export default function HistoryScreen() {
             <TouchableOpacity
                 className="flex-row items-center justify-between py-4 border-b border-white/5"
                 onPress={() => {
-                    
+
                 }}
             >
                 <View className="flex-row items-center gap-3">
@@ -135,7 +141,7 @@ export default function HistoryScreen() {
 
     return (
         <SafeAreaView className="flex-1 bg-primary">
-            {}
+            { }
             <View className="px-6 py-4 flex-row justify-between items-center border-b border-white/5">
                 <Text className="text-white text-xl font-bold">Transaction History</Text>
                 <TouchableOpacity onPress={fetchTransactions} className="p-2">

@@ -1,8 +1,11 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { ArrowLeft, Delete } from 'lucide-react-native';
+import { SafeAreaView as RNSafeAreaView } from 'react-native-safe-area-context';
+const SafeAreaView = RNSafeAreaView as any;
+import { ArrowLeft as ArrowLeftIcon, Delete as DeleteIcon } from 'lucide-react-native';
+const ArrowLeft = ArrowLeftIcon as any;
+const Delete = DeleteIcon as any;
 
 export default function AmountScreen() {
     const router = useRouter();
@@ -32,7 +35,7 @@ export default function AmountScreen() {
 
     return (
         <SafeAreaView className="flex-1 bg-primary">
-            {}
+            { }
             <View className="flex-row items-center p-6">
                 <TouchableOpacity onPress={() => router.back()}>
                     <ArrowLeft color="white" size={24} />
@@ -40,7 +43,7 @@ export default function AmountScreen() {
                 <Text className="text-white font-bold text-lg ml-4">Enter Amount</Text>
             </View>
 
-            {}
+            { }
             <View className="items-center justify-center flex-1">
                 <View className="flex-row items-baseline">
                     <Text className="text-4xl text-gray-400 mr-2">$</Text>
@@ -57,7 +60,7 @@ export default function AmountScreen() {
                 </View>
             </View>
 
-            {}
+            { }
             <View className="px-6 pb-8">
                 <View className="flex-row flex-wrap justify-between">
                     {[1, 2, 3, 4, 5, 6, 7, 8, 9, '.', 0].map((num) => (

@@ -1,9 +1,8 @@
 import { Horizon, Transaction, Networks } from '@stellar/stellar-sdk';
-import prisma from '../lib/prisma';
-import { TransactionType, TxStatus } from '@prisma/client';
+import { SupabaseClient } from '@supabase/supabase-js';
 
 /**
- * Transaction Relay Service (Prisma Version)
+ * Transaction Relay Service
  * 
  * Submits signed transactions to Stellar Horizon and tracks their status.
  */
@@ -33,6 +32,12 @@ export interface TransactionStatus {
 }
 
 export class TxRelayService {
+    private supabase: SupabaseClient;
+
+    constructor(supabaseClient: SupabaseClient) {
+        this.supabase = supabaseClient;
+    }
+
     /**
      * Submit a signed transaction to Horizon
      * @param signedXDR Signed transaction XDR
@@ -94,95 +99,41 @@ export class TxRelayService {
     }
 
     /**
-     * Record transaction in database for tracking
-     * @param walletAddress User's wallet address
+     * Record transaction in database for indexing
+     * @param userId User ID
      * @param hash Transaction hash
      * @param fromAddress Source address
      * @param toAddress Destination address
      * @param amount Amount transferred
      * @param assetCode Asset code
-     * @param type Transaction type
      */
     async recordTransaction(
-        walletAddress: string,
+        userId: string,
         hash: string,
         fromAddress: string,
         toAddress: string,
         amount: string,
         assetCode: string = 'XLM',
-        assetIssuer?: string,
-        type: TransactionType = 'PAYMENT',
-        ledger?: number
+        assetIssuer?: string
     ): Promise<void> {
-        try {
-            // Ensure user exists
-            await prisma.user.upsert({
-                where: { walletAddress },
-                update: {},
-                create: { walletAddress },
+        const { error } = await this.supabase
+            .from('transactions')
+            .insert({
+                user_id: userId,
+                tx_hash: hash,
+                from_address: fromAddress,
+                to_address: toAddress,
+                amount,
+                asset_code: assetCode,
+                asset_issuer: assetIssuer,
+                tx_type: fromAddress === toAddress ? 'payment_in' : 'payment_out',
+                status: 'processing',
+                created_at: new Date().toISOString(),
             });
 
-            // Create transaction record
-            await prisma.transaction.create({
-                data: {
-                    walletAddress,
-                    txHash: hash,
-                    fromAddress,
-                    toAddress,
-                    amount,
-                    assetCode,
-                    assetIssuer,
-                    type,
-                    status: 'PENDING',
-                    ledger,
-                },
-            });
-        } catch (error: any) {
+        if (error) {
             console.error('Failed to record transaction:', error);
         }
-    }
-
-    /**
-     * Update transaction status in database
-     * @param hash Transaction hash
-     * @param status New status
-     * @param ledger Ledger number (optional)
-     */
-    async updateTransactionStatus(
-        hash: string,
-        status: TxStatus,
-        ledger?: number
-    ): Promise<void> {
-        try {
-            await prisma.transaction.update({
-                where: { txHash: hash },
-                data: {
-                    status,
-                    ledger,
-                },
-            });
-        } catch (error: any) {
-            console.error('Failed to update transaction status:', error);
-        }
-    }
-
-    /**
-     * Get user's transactions
-     * @param walletAddress User's wallet address
-     * @param limit Number of transactions to return
-     */
-    async getUserTransactions(walletAddress: string, limit: number = 50) {
-        return prisma.transaction.findMany({
-            where: {
-                OR: [
-                    { walletAddress },
-                    { fromAddress: walletAddress },
-                    { toAddress: walletAddress },
-                ],
-            },
-            orderBy: { createdAt: 'desc' },
-            take: limit,
-        });
     }
 
     /**
@@ -238,6 +189,3 @@ export class TxRelayService {
         return error.message || 'Transaction submission failed';
     }
 }
-
-// Export singleton instance
-export const txRelayService = new TxRelayService();

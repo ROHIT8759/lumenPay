@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, Alert } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView as RNSafeAreaView } from 'react-native-safe-area-context';
+const SafeAreaView = RNSafeAreaView as any;
 import { ArrowLeft, ShieldCheck, ArrowRight, Fingerprint } from 'lucide-react-native';
 
 const Icons = {
@@ -11,11 +12,13 @@ const Icons = {
     Fingerprint: Fingerprint as any,
 };
 import Animated, { useSharedValue, useAnimatedStyle, withSpring, runOnJS } from 'react-native-reanimated';
-import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
+import { Gesture, GestureDetector, GestureHandlerRootView as GHRootView } from 'react-native-gesture-handler';
+const GestureHandlerRootView = GHRootView as any;
+const AnimatedView = Animated.View as any;
 import { loadWallet } from '../../lib/stellar';
 import { useBiometrics } from '../../hooks/useBiometrics';
-import { walletAuth } from '../../../lib/lumenVault';
-import { API } from '../../../lib/config';
+import { LumenVault } from '../../lib/lumenvault/LumenVault';
+import { paymentApi } from '../../lib/api/paymentApi';
 import { TransactionBuilder, Networks } from '@stellar/stellar-sdk';
 
 export default function ConfirmScreen() {
@@ -32,7 +35,7 @@ export default function ConfirmScreen() {
     const threshold = width * 0.7;
 
     const pan = Gesture.Pan()
-        .onChange((event) => {
+        .onChange((event: any) => {
             if (status !== 'idle') return;
             offset.value = Math.min(Math.max(event.translationX, 0), width - 60);
         })
@@ -83,38 +86,23 @@ export default function ConfirmScreen() {
             // 2. Sign Local
             // 3. Submit TX (Confirm)
 
-            const buildResponse = await walletAuth.authenticatedFetch(API.TX.BUILD, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    destination: address,
-                    amount: amount,
-                    assetCode: 'USDC', // Assuming USDC based on UI, or make dynamic
-                })
+            // 1. Build TX
+            const buildResult = await paymentApi.buildPayment({
+                to: String(address),
+                amount: String(amount),
+                assetCode: 'USDC',
             });
 
-            if (!buildResponse.ok) throw new Error('Failed to build transaction');
-            const { xdr, networkPassphrase } = await buildResponse.json();
+            // 2. Sign
+            const signedResult = await LumenVault.signTransaction(buildResult.xdr);
 
-            // Sign
-            const walletKeys = await loadWallet();
-            if (!walletKeys) throw new Error('No local wallet found');
-
-            const tx = TransactionBuilder.fromXDR(xdr, networkPassphrase || Networks.TESTNET);
-            tx.sign(walletKeys);
-            const signedXdr = tx.toXDR();
-
-            // Submit
-            const submitResponse = await walletAuth.authenticatedFetch(API.TX.SUBMIT, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ signedXdr })
+            // 3. Submit
+            await paymentApi.submitSignedPayment({
+                signedXDR: signedResult.signedXdr,
+                to: String(address),
+                amount: String(amount),
+                assetCode: 'USDC',
             });
-
-            if (!submitResponse.ok) {
-                const errData = await submitResponse.json();
-                throw new Error(errData.error || 'Payment submission failed');
-            }
 
             setStatus('success');
             setTimeout(() => {
@@ -191,9 +179,9 @@ export default function ConfirmScreen() {
                     </Text>
 
                     <GestureDetector gesture={pan}>
-                        <Animated.View className="absolute left-1 w-14 h-14 bg-accent rounded-full items-center justify-center shadow-lg shadow-accent/50" style={slideStyle}>
+                        <AnimatedView className="absolute left-1 w-14 h-14 bg-accent rounded-full items-center justify-center shadow-lg shadow-accent/50" style={slideStyle}>
                             <Icons.ArrowRight color="#0B1C2D" size={24} />
-                        </Animated.View>
+                        </AnimatedView>
                     </GestureDetector>
                 </View>
 

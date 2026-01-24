@@ -1,27 +1,15 @@
+import dotenv from 'dotenv';
 import express from 'express';
 import cors from 'cors';
 import authRoutes from './routes/auth';
 import transactionRoutes from './routes/transactions';
 import escrowRoutes from './routes/escrow';
-
-/**
- * LumenPay Backend Server
- * 
- * Main Express server for handling:
- * - Wallet-based authentication
- * - Unsigned transaction building
- * - Signed transaction relay
- * - Soroban escrow operations
- */
-
+import kycRoutes from './routes/kyc';
+dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3001;
-
-// Middleware
 app.use(cors());
 app.use(express.json());
-
-// Health check
 app.get('/health', (req, res) => {
     res.json({
         status: 'healthy',
@@ -29,13 +17,10 @@ app.get('/health', (req, res) => {
         network: process.env.STELLAR_NETWORK || 'testnet',
     });
 });
-
-// Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/transactions', transactionRoutes);
 app.use('/api/escrow', escrowRoutes);
-
-// Error handling
+app.use('/api/kyc', kycRoutes);
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
     console.error('Unhandled error:', err);
     res.status(500).json({

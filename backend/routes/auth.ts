@@ -1,8 +1,9 @@
 import dotenv from 'dotenv';
-dotenv.config();
+dotenv.config({ path: '../.env' }); // Load from backend/.env
 
 import { Router, Request, Response } from 'express';
-import { authService } from '../services/authService';
+import { createClient } from '@supabase/supabase-js';
+import { AuthService } from '../services/authService';
 import { tokenService } from '../services/tokenService';
 
 /**
@@ -11,10 +12,16 @@ import { tokenService } from '../services/tokenService';
  * Handles wallet-based authentication:
  * - GET /auth/nonce - Request nonce for signing
  * - POST /auth/verify - Verify signature and issue JWT
- * - POST /auth/signup - Create user record (on wallet creation)
  */
 
 const router = Router();
+
+const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
+
+const authService = new AuthService(supabase);
 
 /**
  * GET /auth/nonce
@@ -78,7 +85,7 @@ router.post('/verify', async (req: Request, res: Response) => {
         }
 
         // Ensure user exists in database
-        const { userId, isNew } = await authService.ensureUserExists(publicKey);
+        const { userId } = await authService.ensureUserExists(publicKey);
 
         // Issue JWT token
         const token = tokenService.issueToken(publicKey, userId);
@@ -89,7 +96,6 @@ router.post('/verify', async (req: Request, res: Response) => {
             user: {
                 id: userId,
                 publicKey,
-                isNew,
             },
         });
     } catch (error: any) {
@@ -136,7 +142,8 @@ router.post('/signup', async (req: Request, res: Response) => {
             });
         }
 
-        // Ensure user exists
+        // Just ensure user exists. No signature required for initial claim (standard for non-custodial)
+        // Ideally we would sign a challenge here too, but for "Create Wallet" flow we just want to init the record.
         const { userId, isNew } = await authService.ensureUserExists(publicKey);
 
         res.json({
@@ -151,40 +158,6 @@ router.post('/signup', async (req: Request, res: Response) => {
         console.error('Signup error:', error);
         res.status(500).json({
             error: 'Signup failed',
-            message: error.message,
-        });
-    }
-});
-
-/**
- * GET /auth/user/:publicKey
- * Get user details by public key
- */
-router.get('/user/:publicKey', async (req: Request, res: Response) => {
-    try {
-        const { publicKey } = req.params;
-
-        const user = await authService.getUser(publicKey);
-
-        if (!user) {
-            return res.status(404).json({
-                error: 'User not found',
-            });
-        }
-
-        res.json({
-            success: true,
-            user: {
-                walletAddress: user.walletAddress,
-                kycStatus: user.kycStatus,
-                createdAt: user.createdAt,
-                hasTelegram: !!user.telegramLink,
-            },
-        });
-    } catch (error: any) {
-        console.error('Get user error:', error);
-        res.status(500).json({
-            error: 'Failed to get user',
             message: error.message,
         });
     }

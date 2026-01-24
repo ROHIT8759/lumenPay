@@ -1,10 +1,3 @@
-
-
-
-
-
-
-
 import React, { useState, useEffect, useCallback } from 'react';
 import {
     View,
@@ -14,16 +7,24 @@ import {
     ActivityIndicator,
     Alert,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
+import { LinearGradient as ExpoLinearGradient } from 'expo-linear-gradient';
+const LinearGradient = ExpoLinearGradient as any;
+const AnimatedView = Animated.View as any;
 import { useRouter } from 'expo-router';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
-import { ShieldCheck, AlertCircle, CheckCircle, Clock, ArrowLeft } from 'lucide-react-native';
+import { ShieldCheck as ShieldCheckIcon, AlertCircle as AlertCircleIcon, CheckCircle as CheckCircleIcon, Clock as ClockIcon, ArrowLeft as ArrowLeftIcon } from 'lucide-react-native';
+const ShieldCheck = ShieldCheckIcon as any;
+const AlertCircle = AlertCircleIcon as any;
+const CheckCircle = CheckCircleIcon as any;
+const Clock = ClockIcon as any;
+const ArrowLeft = ArrowLeftIcon as any;
 import { diditKYC, KYCStatusResponse } from '../../lib/diditKyc';
+import { loadWallet } from '../../lib/stellar';
 
 
-const getWalletAddress = (): string => {
-
-    return 'GXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX';
+const getWalletAddress = async (): Promise<string | null> => {
+    const wallet = await loadWallet();
+    return wallet ? wallet.publicKey() : null;
 };
 
 type VerificationStatus = 'NOT_STARTED' | 'PENDING' | 'APPROVED' | 'REJECTED' | 'EXPIRED' | 'LOADING';
@@ -34,9 +35,10 @@ export default function KYCVerifyScreen() {
     const [isStarting, setIsStarting] = useState(false);
     const [confidenceScore, setConfidenceScore] = useState<number | undefined>();
 
-    const walletAddress = getWalletAddress();
+    const [walletAddress, setWalletAddress] = useState<string>('');
 
     const loadStatus = useCallback(async () => {
+        if (!walletAddress) return;
         setStatus('LOADING');
         const result = await diditKYC.getStatus(walletAddress);
         if (result.success && result.status) {
@@ -48,8 +50,14 @@ export default function KYCVerifyScreen() {
     }, [walletAddress]);
 
     useEffect(() => {
-        loadStatus();
-    }, [loadStatus]);
+        getWalletAddress().then(setWalletAddress).catch(console.error);
+    }, []);
+
+    useEffect(() => {
+        if (walletAddress) {
+            loadStatus();
+        }
+    }, [walletAddress, loadStatus]);
 
 
     const handleStartVerification = async () => {
@@ -132,7 +140,7 @@ export default function KYCVerifyScreen() {
 
         if (status === 'APPROVED') {
             return (
-                <Animated.View entering={FadeInUp.delay(200)} style={styles.centerContent}>
+                <AnimatedView entering={FadeInUp.delay(200)} style={styles.centerContent}>
                     {renderStatusIcon()}
                     <Text style={styles.title}>Identity Verified</Text>
                     <Text style={styles.subtitle}>
@@ -154,13 +162,13 @@ export default function KYCVerifyScreen() {
                             <Text style={styles.benefitText}>Loans & Credit (Coming Soon)</Text>
                         </View>
                     </View>
-                </Animated.View>
+                </AnimatedView>
             );
         }
 
         if (status === 'PENDING') {
             return (
-                <Animated.View entering={FadeInUp.delay(200)} style={styles.centerContent}>
+                <AnimatedView entering={FadeInUp.delay(200)} style={styles.centerContent}>
                     {renderStatusIcon()}
                     <Text style={styles.title}>Verification In Progress</Text>
                     <Text style={styles.subtitle}>
@@ -171,13 +179,13 @@ export default function KYCVerifyScreen() {
                     <TouchableOpacity style={styles.secondaryButton} onPress={loadStatus}>
                         <Text style={styles.secondaryButtonText}>Refresh Status</Text>
                     </TouchableOpacity>
-                </Animated.View>
+                </AnimatedView>
             );
         }
 
         if (status === 'REJECTED' || status === 'EXPIRED') {
             return (
-                <Animated.View entering={FadeInUp.delay(200)} style={styles.centerContent}>
+                <AnimatedView entering={FadeInUp.delay(200)} style={styles.centerContent}>
                     {renderStatusIcon()}
                     <Text style={styles.title}>
                         {status === 'REJECTED' ? 'Verification Failed' : 'Verification Expired'}
@@ -197,13 +205,13 @@ export default function KYCVerifyScreen() {
                             <Text style={styles.buttonText}>Try Again</Text>
                         </LinearGradient>
                     </TouchableOpacity>
-                </Animated.View>
+                </AnimatedView>
             );
         }
 
 
         return (
-            <Animated.View entering={FadeInUp.delay(200)} style={styles.centerContent}>
+            <AnimatedView entering={FadeInUp.delay(200)} style={styles.centerContent}>
                 {renderStatusIcon()}
                 <Text style={styles.title}>Verify Your Identity</Text>
                 <Text style={styles.subtitle}>
@@ -238,20 +246,20 @@ export default function KYCVerifyScreen() {
                         )}
                     </LinearGradient>
                 </TouchableOpacity>
-            </Animated.View>
+            </AnimatedView>
         );
     };
 
     return (
         <View style={styles.container}>
             {/* Header */}
-            <Animated.View entering={FadeInDown} style={styles.header}>
+            <AnimatedView entering={FadeInDown} style={styles.header}>
                 <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
                     <ArrowLeft color="#FFF" size={24} />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>Identity Verification</Text>
                 <View style={{ width: 40 }} />
-            </Animated.View>
+            </AnimatedView>
 
             {/* Main Content */}
             <View style={styles.content}>

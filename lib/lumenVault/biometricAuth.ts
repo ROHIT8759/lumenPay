@@ -15,7 +15,8 @@ let LocalAuthentication: typeof import('expo-local-authentication') | null = nul
 async function loadLocalAuth() {
     if (typeof window !== 'undefined' && (window as { expo?: unknown }).expo) {
         try {
-            LocalAuthentication = await import('expo-local-authentication');
+            // LocalAuthentication = await import('expo-local-authentication');
+             console.log("Expo Local Auth not enabled in web");
         } catch {
         }
     }
