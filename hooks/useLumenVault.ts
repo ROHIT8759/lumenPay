@@ -1,15 +1,4 @@
-
-
-
-
-
-
-
-
-
-
 'use client';
-
 import { useState, useEffect, useCallback } from 'react';
 import {
     generateKeypair,
@@ -26,40 +15,40 @@ import { walletAuth, AuthSession } from '@/lib/lumenVault/walletAuth';
 import { NETWORK, API } from '@/lib/config';
 
 export interface LumenVaultState {
-    
+    // Wallet state
     isInitialized: boolean;
     isLocked: boolean;
     publicKey: string | null;
 
-    
+    // Auth state
     isAuthenticated: boolean;
     session: AuthSession | null;
 
-    
+    // Loading states
     isCreating: boolean;
     isSigning: boolean;
     isAuthenticating: boolean;
 
-    
+    // Error state
     error: string | null;
 }
 
 export interface LumenVaultActions {
-    
+    // Wallet management
     createWallet: (passphrase: string) => Promise<{ publicKey: string } | null>;
     importWallet: (secretKey: string, passphrase: string) => Promise<{ publicKey: string } | null>;
     unlockWallet: (passphrase: string) => Promise<boolean>;
     lockWallet: () => void;
     deleteWallet: () => Promise<void>;
 
-    
+    // Authentication
     signIn: (passphrase: string) => Promise<boolean>;
     signOut: () => void;
 
-    
+    // Transaction signing
     signTransaction: (xdr: string, passphrase: string) => Promise<{ signedXdr: string; hash: string } | null>;
 
-    
+    // Utility
     clearError: () => void;
 }
 
@@ -80,14 +69,14 @@ export function useLumenVault(): [LumenVaultState, LumenVaultActions] {
 
     const [walletData, setWalletData] = useState<WalletData | null>(null);
 
-    
+    // Initialize on mount
     useEffect(() => {
         initializeWallet();
     }, []);
 
     const initializeWallet = async () => {
         try {
-            
+            // Check for existing wallet in localStorage
             const stored = localStorage.getItem(WALLET_STORAGE_KEY);
             if (stored) {
                 const data: WalletData = JSON.parse(stored);
@@ -96,13 +85,13 @@ export function useLumenVault(): [LumenVaultState, LumenVaultActions] {
                     ...prev,
                     isInitialized: true,
                     publicKey: data.publicKey,
-                    isLocked: true, 
+                    isLocked: true, // Always start locked
                 }));
             } else {
                 setState(prev => ({ ...prev, isInitialized: true }));
             }
 
-            
+            // Check for existing auth session
             const session = walletAuth.getSession();
             if (session) {
                 setState(prev => ({
@@ -121,13 +110,13 @@ export function useLumenVault(): [LumenVaultState, LumenVaultActions] {
         setState(prev => ({ ...prev, isCreating: true, error: null }));
 
         try {
-            
+            // Generate new keypair
             const keypair = generateKeypair();
 
-            
+            // Create wallet data with encrypted secret
             const data = await createWalletData(keypair, passphrase);
 
-            
+            // Store in localStorage
             localStorage.setItem(WALLET_STORAGE_KEY, JSON.stringify(data));
 
             setWalletData(data);
@@ -156,14 +145,14 @@ export function useLumenVault(): [LumenVaultState, LumenVaultActions] {
         setState(prev => ({ ...prev, isCreating: true, error: null }));
 
         try {
-            
+            // Import keypair from secret
             const { importKeypair } = await import('@/lib/lumenVault/keyManager');
             const keypair = importKeypair(secretKey);
 
-            
+            // Create wallet data
             const data = await createWalletData(keypair, passphrase);
 
-            
+            // Store in localStorage
             localStorage.setItem(WALLET_STORAGE_KEY, JSON.stringify(data));
 
             setWalletData(data);
@@ -192,7 +181,7 @@ export function useLumenVault(): [LumenVaultState, LumenVaultActions] {
         }
 
         try {
-            
+            // Try to decrypt - will throw if wrong passphrase
             await getKeypairFromWallet(walletData, passphrase);
 
             setState(prev => ({ ...prev, isLocked: false, error: null }));

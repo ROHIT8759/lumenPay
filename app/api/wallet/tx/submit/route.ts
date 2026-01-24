@@ -1,12 +1,3 @@
-
-
-
-
-
-
-
-
-
 import { NextRequest, NextResponse } from 'next/server';
 import { walletService } from '@/lib/walletService';
 import { jwtVerify } from 'jose';
@@ -22,7 +13,7 @@ interface SubmitTransactionRequest {
 
 export async function POST(request: NextRequest) {
     try {
-        
+        // Verify JWT token
         const authHeader = request.headers.get('Authorization');
         if (!authHeader || !authHeader.startsWith('Bearer ')) {
             return NextResponse.json(
@@ -47,7 +38,6 @@ export async function POST(request: NextRequest) {
         const body: SubmitTransactionRequest = await request.json();
         const { signedXdr } = body;
 
-        
         if (!signedXdr || typeof signedXdr !== 'string') {
             return NextResponse.json(
                 { error: 'Missing signedXdr' },
@@ -55,7 +45,7 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        
+        // Submit to Stellar network
         const result = await walletService.submitSignedTransaction(signedXdr);
 
         if (!result.success) {
@@ -65,7 +55,7 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        
+        // Record transaction in database
         try {
             await supabase.from('transactions').insert({
                 user_id: userAddress,
@@ -77,7 +67,7 @@ export async function POST(request: NextRequest) {
             });
         } catch (dbError) {
             console.warn('Failed to record transaction:', dbError);
-            
+            // Don't fail the request if DB write fails
         }
 
         return NextResponse.json({
