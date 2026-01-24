@@ -13,9 +13,16 @@ export const metadata: Metadata = {
   title: "LumenPay | Reimagining UPI on Stellar",
   description: "Clean, fast, calm, powerful, and invisible Web3 payments.",
   icons: {
-    icon: "/assets/logo.svg",
-    apple: "/assets/logo.svg",
+    icon: "/assets/logo.png", 
+    apple: "/assets/logo.png",
   },
+  viewport: {
+    width: "device-width",
+    initialScale: 1,
+    maximumScale: 1,
+    viewportFit: "cover",
+  },
+  themeColor: "#030014",
 };
 
 export default function RootLayout({
@@ -30,7 +37,7 @@ export default function RootLayout({
         <StarfieldBackground />
         <Navbar />
         <MobileTopBar />
-        <main className="pt-20 md:pt-24 min-h-screen relative z-10 text-white pb-24 md:pb-10">
+        <main className="pt-16 md:pt-24 min-h-screen relative z-10 text-white pb-20 md:pb-10">
           {children}
         </main>
         <Footer />
