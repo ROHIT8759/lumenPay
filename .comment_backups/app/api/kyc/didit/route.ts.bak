@@ -1,0 +1,121 @@
+/**
+ * Didit KYC API Routes
+ * 
+ * POST /api/kyc/didit - Start a new biometric verification session
+ * GET /api/kyc/didit - Get KYC status for a wallet
+ */
+
+import { NextRequest, NextResponse } from 'next/server';
+import { diditService } from '@/lib/diditService';
+
+/**
+ * POST /api/kyc/didit
+ * Creates a new Didit biometric verification session
+ * 
+ * Request body:
+ * {
+ *   wallet_address: string,
+ *   reference_image_url?: string
+ * }
+ * 
+ * Response:
+ * {
+ *   success: boolean,
+ *   verification_url?: string,
+ *   session_id?: string,
+ *   error?: string
+ * }
+ */
+export async function POST(request: NextRequest) {
+    try {
+        const body = await request.json();
+        const { wallet_address, reference_image_url } = body;
+
+        // Validate wallet address
+        if (!wallet_address || typeof wallet_address !== 'string') {
+            return NextResponse.json(
+                { success: false, error: 'wallet_address is required' },
+                { status: 400 }
+            );
+        }
+
+        // Validate Stellar address format (starts with G, 56 chars)
+        if (!wallet_address.startsWith('G') || wallet_address.length !== 56) {
+            return NextResponse.json(
+                { success: false, error: 'Invalid Stellar wallet address format' },
+                { status: 400 }
+            );
+        }
+
+        // Create Didit session
+        const result = await diditService.createSession(wallet_address, reference_image_url);
+
+        if (!result.success) {
+            return NextResponse.json(
+                { success: false, error: result.error },
+                { status: 500 }
+            );
+        }
+
+        return NextResponse.json({
+            success: true,
+            verification_url: result.verification_url,
+            session_id: result.session_id
+        });
+
+    } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        console.error('[KYC/Didit] POST error:', errorMessage);
+        return NextResponse.json(
+            { success: false, error: errorMessage },
+            { status: 500 }
+        );
+    }
+}
+
+/**
+ * GET /api/kyc/didit?wallet_address=xxx
+ * OR
+ * GET /api/kyc/didit?session_id=xxx
+ * 
+ * Returns the KYC status for a wallet address or session
+ */
+export async function GET(request: NextRequest) {
+    try {
+        const searchParams = request.nextUrl.searchParams;
+        const walletAddress = searchParams.get('wallet_address');
+        const sessionId = searchParams.get('session_id');
+
+        if (!walletAddress && !sessionId) {
+            return NextResponse.json(
+                { success: false, error: 'wallet_address or session_id is required' },
+                { status: 400 }
+            );
+        }
+
+        // If session_id is provided, get status from Didit API
+        if (sessionId) {
+            const result = await diditService.getSessionStatus(sessionId);
+            return NextResponse.json(result);
+        }
+
+        // Otherwise get status from database by wallet address
+        if (walletAddress) {
+            const result = await diditService.getKYCStatus(walletAddress);
+            return NextResponse.json(result);
+        }
+
+        return NextResponse.json(
+            { success: false, error: 'Invalid request' },
+            { status: 400 }
+        );
+
+    } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        console.error('[KYC/Didit] GET error:', errorMessage);
+        return NextResponse.json(
+            { success: false, error: errorMessage },
+            { status: 500 }
+        );
+    }
+}

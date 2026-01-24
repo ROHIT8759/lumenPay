@@ -1,0 +1,564 @@
+import { createClient } from "@supabase/supabase-js";
+import { Keypair, Account, TransactionBuilder, Networks, Operation, Asset, Memo, Horizon } from "@stellar/stellar-sdk";
+import crypto from "crypto";
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
+
+const ENCRYPTION_KEY = process.env.WALLET_ENCRYPTION_KEY!;
+const NETWORK_PASSPHRASE = Networks.TESTNET;
+
+
+
+
+
+function encryptKey(secretKey: string): { encrypted: string; iv: string } {
+  const iv = crypto.randomBytes(16);
+  const cipher = crypto.createCipheriv(
+    "aes-256-gcm",
+    Buffer.from(ENCRYPTION_KEY, "hex"),
+    iv
+  );
+
+  let encrypted = cipher.update(secretKey, "utf8", "hex");
+  encrypted += cipher.final("hex");
+
+  const authTag = cipher.getAuthTag();
+  const combined = encrypted + authTag.toString("hex");
+
+  return {
+    encrypted: combined,
+    iv: iv.toString("hex"),
+  };
+}
+
+function decryptKey(encrypted: string, iv: string): string {
+  const authTag = Buffer.from(encrypted.slice(-32), "hex");
+  const encryptedData = encrypted.slice(0, -32);
+
+  const decipher = crypto.createDecipheriv(
+    "aes-256-gcm",
+    Buffer.from(ENCRYPTION_KEY, "hex"),
+    Buffer.from(iv, "hex")
+  );
+
+  decipher.setAuthTag(authTag);
+
+  let decrypted = decipher.update(encryptedData, "hex", "utf8");
+  decrypted += decipher.final("utf8");
+
+  return decrypted;
+}
+
+
+
+
+
+export async function createWalletForUser(userId: string, email: string) {
+  try {
+
+    const keypair = Keypair.random();
+
+
+    const { encrypted, iv } = encryptKey(keypair.secret());
+
+
+    const { data, error } = await supabase.from("wallets").insert({
+      user_id: userId,
+      public_key: keypair.publicKey(),
+      encrypted_secret_key: encrypted,
+      encryption_iv: iv,
+      network: "testnet",
+    });
+
+    if (error) throw error;
+
+
+    const payId = `${email.split("@")[0]}.${userId.slice(0, 8)}@steller`;
+
+
+    const { error: profileError } = await supabase
+      .from("profiles")
+      .update({ pay_id: payId })
+      .eq("user_id", userId);
+
+    if (profileError) throw profileError;
+
+    return {
+      success: true,
+      publicKey: keypair.publicKey(),
+      payId,
+    };
+  } catch (error) {
+    console.error("Failed to create wallet:", error);
+    throw error;
+  }
+}
+
+
+
+
+
+export async function getWalletForUser(userId: string) {
+  try {
+    const { data, error } = await supabase
+      .from("wallets")
+      .select("*")
+      .eq("user_id", userId)
+      .single();
+
+    if (error) throw error;
+    if (!data) return null;
+
+    return {
+      publicKey: data.public_key,
+      encryptedKey: data.encrypted_secret_key,
+      iv: data.encryption_iv,
+    };
+  } catch (error) {
+    console.error("Failed to get wallet:", error);
+    throw error;
+  }
+}
+
+export async function getSecretKeyForUser(userId: string): Promise<string> {
+  try {
+    const wallet = await getWalletForUser(userId);
+    if (!wallet) throw new Error("Wallet not found");
+
+    const secretKey = decryptKey(wallet.encryptedKey, wallet.iv);
+    return secretKey;
+  } catch (error) {
+    console.error("Failed to decrypt secret key:", error);
+    throw error;
+  }
+}
+
+
+
+
+
+export async function getBalance(publicKey: string): Promise<string> {
+  try {
+    const server = new Horizon.Server(
+      "https://horizon-testnet.stellar.org"
+    );
+
+    const account = await server.loadAccount(publicKey);
+    const xlmBalance = account.balances.find((bal: any) => bal.asset_type === "native");
+    return xlmBalance ? xlmBalance.balance : "0";
+  } catch (error) {
+    console.error("Failed to get balance:", error);
+    return "0";
+  }
+}
+
+export async function getAccountDetails(publicKey: string) {
+  try {
+    const server = new Horizon.Server(
+      "https://horizon-testnet.stellar.org"
+    );
+
+    const account = await server.loadAccount(publicKey);
+    return {
+      sequence: account.sequence,
+      balances: account.balances,
+    };
+  } catch (error) {
+    console.error("Failed to get account details:", error);
+    throw error;
+  }
+}
+
+
+
+
+
+export async function buildPaymentTransaction(params: {
+  fromPublicKey: string;
+  toPublicKey: string;
+  amount: string;
+  memo?: string;
+  assetCode?: string;
+}): Promise<string> {
+  try {
+    const server = new Horizon.Server(
+      "https://horizon-testnet.stellar.org"
+    );
+
+    const account = await server.loadAccount(params.fromPublicKey);
+
+    let asset = Asset.native();
+    if (params.assetCode && params.assetCode !== "XLM") {
+
+      asset = Asset.native();
+    }
+
+    const builder = new TransactionBuilder(account, {
+      fee: "100",
+      networkPassphrase: NETWORK_PASSPHRASE,
+    });
+
+    if (params.memo) {
+      builder.addMemo(Memo.text(params.memo));
+    }
+
+    builder.addOperation(
+      Operation.payment({
+        destination: params.toPublicKey,
+        asset,
+        amount: params.amount,
+      })
+    );
+
+    builder.setTimeout(180);
+    const transaction = builder.build();
+
+    return transaction.toEnvelope().toXDR("base64");
+  } catch (error) {
+    console.error("Failed to build transaction:", error);
+    throw error;
+  }
+}
+
+export async function signAndSubmitTransaction(params: {
+  userId: string;
+  transactionXdr: string;
+}): Promise<{ hash: string; error?: string }> {
+  try {
+    const secretKey = await getSecretKeyForUser(params.userId);
+    const keypair = Keypair.fromSecret(secretKey);
+
+    const server = new Horizon.Server(
+      "https://horizon-testnet.stellar.org"
+    );
+
+    
+    const transaction = TransactionBuilder.fromXDR(params.transactionXdr, NETWORK_PASSPHRASE);
+
+    
+    transaction.sign(keypair);
+
+    const result = await server.submitTransaction(transaction);
+
+    return { hash: result.hash };
+  } catch (error: any) {
+    console.error("Failed to sign and submit transaction:", error);
+    return { hash: "", error: error.message };
+  }
+}
+
+
+
+
+
+export async function recordTransaction(params: {
+  userId: string;
+  fromAddress: string;
+  toAddress: string;
+  toPayId?: string;
+  amount: string;
+  assetCode: string;
+  stellarTxHash: string;
+  memo?: string;
+  type?: string;
+}): Promise<void> {
+  try {
+    const amountStroops = Math.floor(parseFloat(params.amount) * 10_000_000);
+
+    await supabase.from("transactions").insert({
+      user_id: params.userId,
+      from_address: params.fromAddress,
+      to_address: params.toAddress,
+      to_pay_id: params.toPayId,
+      amount: amountStroops,
+      asset_code: params.assetCode,
+      stellar_tx_hash: params.stellarTxHash,
+      memo: params.memo,
+      type: params.type || "payment",
+      status: "confirmed",
+      confirmed_at: new Date(),
+    });
+
+
+    const toProfile = await supabase
+      .from("profiles")
+      .select("id")
+      .eq("pay_id", params.toPayId)
+      .single();
+
+    if (toProfile.data) {
+      const existingPerson = await supabase
+        .from("people")
+        .select("*")
+        .eq("user_id", params.userId)
+        .eq("contact_id", toProfile.data.id)
+        .single();
+
+      if (existingPerson.data) {
+
+        await supabase
+          .from("people")
+          .update({
+            last_transaction_at: new Date(),
+            transaction_count: (existingPerson.data.transaction_count || 0) + 1,
+            total_amount_stroops:
+              (existingPerson.data.total_amount_stroops || 0) + amountStroops,
+            updated_at: new Date(),
+          })
+          .eq("id", existingPerson.data.id);
+      } else {
+
+        const toUser = await supabase
+          .from("users")
+          .select("id")
+          .eq("email", params.toAddress)
+          .single();
+
+        if (toUser.data) {
+          await supabase.from("people").insert({
+            user_id: params.userId,
+            contact_id: toProfile.data.id,
+            pay_id: params.toPayId,
+            public_key: params.toAddress,
+            last_transaction_at: new Date(),
+            transaction_count: 1,
+            total_amount_stroops: amountStroops,
+          });
+        }
+      }
+    }
+  } catch (error) {
+    console.error("Failed to record transaction:", error);
+    throw error;
+  }
+}
+
+
+
+
+
+export async function resolvePayId(payId: string): Promise<string | null> {
+  try {
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("id")
+      .eq("pay_id", payId)
+      .single();
+
+    if (error || !data) return null;
+
+    const wallet = await supabase
+      .from("wallets")
+      .select("public_key")
+      .eq("user_id", data.id)
+      .single();
+
+    return wallet.data?.public_key || null;
+  } catch (error) {
+    console.error("Failed to resolve Pay ID:", error);
+    return null;
+  }
+}
+
+
+
+
+
+export async function getTransactionHistory(
+  userId: string,
+  limit: number = 20,
+  offset: number = 0
+) {
+  try {
+    const { data, error } = await supabase
+      .from("transactions")
+      .select("*")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
+      .range(offset, offset + limit - 1);
+
+    if (error) throw error;
+
+    return data.map((tx: any) => ({
+      id: tx.id,
+      from: tx.from_address,
+      to: tx.to_address,
+      toPayId: tx.to_pay_id,
+      amount: (tx.amount / 10_000_000).toFixed(7),
+      assetCode: tx.asset_code,
+      status: tx.status,
+      hash: tx.stellar_tx_hash,
+      memo: tx.memo,
+      type: tx.type,
+      createdAt: new Date(tx.created_at),
+    }));
+  } catch (error) {
+    console.error("Failed to get transaction history:", error);
+    throw error;
+  }
+}
+
+export async function getRecentPeople(userId: string, limit: number = 7) {
+  try {
+
+    const { data: userWallet, error: walletError } = await supabase
+      .from("wallets")
+      .select("public_key")
+      .eq("user_id", userId)
+      .single();
+
+    if (walletError || !userWallet) {
+      return [];
+    }
+
+    const userAddress = userWallet.public_key;
+
+
+    const { data: transactions, error: txError } = await supabase
+      .from("transactions")
+      .select(`
+        id,
+        tx_type,
+        recipient_address,
+        recipient_name,
+        sender_address,
+        sender_display_name,
+        amount,
+        asset_code,
+        created_at,
+        status,
+        meta_data
+      `)
+      .eq("user_id", userId)
+      .in("tx_type", ["payment_out", "payment_in"])
+      .in("status", ["success", "pending", "processing"])
+      .order("created_at", { ascending: false });
+
+    if (txError) throw txError;
+
+    if (!transactions || transactions.length === 0) {
+      return [];
+    }
+
+
+    const { data: contacts } = await supabase
+      .from("contacts")
+      .select("contact_address, contact_name")
+      .eq("user_id", userId);
+
+    const contactMap = new Map<string, string>();
+    (contacts || []).forEach((c: any) => {
+      contactMap.set(c.contact_address, c.contact_name);
+    });
+
+
+    const peopleMap = new Map<string, {
+      address: string;
+      name: string | null;
+      senderDisplayName: string | null;
+      lastTransactionAt: string;
+      direction: 'sent' | 'received';
+      lastAmount: number;
+      assetCode: string;
+    }>();
+
+    for (const tx of transactions) {
+      let counterpartAddress: string | null = null;
+      let direction: 'sent' | 'received' = 'sent';
+
+      if (tx.tx_type === 'payment_out') {
+
+        counterpartAddress = tx.recipient_address;
+        direction = 'sent';
+      } else if (tx.tx_type === 'payment_in') {
+
+        counterpartAddress = tx.sender_address || tx.meta_data?.sender_address || tx.recipient_address;
+        direction = 'received';
+      }
+
+
+      if (!counterpartAddress || counterpartAddress === userAddress) {
+        continue;
+      }
+
+
+      if (!peopleMap.has(counterpartAddress)) {
+        peopleMap.set(counterpartAddress, {
+          address: counterpartAddress,
+          name: tx.recipient_name || null,
+          senderDisplayName: tx.sender_display_name || null,
+          lastTransactionAt: tx.created_at,
+          direction,
+          lastAmount: tx.amount,
+          assetCode: tx.asset_code || 'USDC',
+        });
+      }
+    }
+
+
+    const uniquePeople = Array.from(peopleMap.values()).slice(0, limit);
+
+
+    const enrichedPeople = await Promise.all(
+      uniquePeople.map(async (person) => {
+
+        const customName = contactMap.get(person.address);
+
+
+        const { data: wallet } = await supabase
+          .from("wallets")
+          .select("user_id")
+          .eq("public_key", person.address)
+          .single();
+
+        let profileDisplayName: string | null = null;
+        let payId: string | null = null;
+        let avatarUrl: string | null = null;
+
+        if (wallet?.user_id) {
+
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("full_name, display_name, avatar_url, pay_id")
+            .eq("id", wallet.user_id)
+            .single();
+
+          if (profile) {
+            profileDisplayName = profile.display_name || profile.full_name || null;
+            avatarUrl = profile.avatar_url;
+            payId = profile.pay_id;
+          }
+        }
+
+
+        const shortAddress = `${person.address.slice(0, 4)}...${person.address.slice(-4)}`;
+
+
+        const displayName = customName || profileDisplayName || person.senderDisplayName || payId || shortAddress;
+
+        return {
+          id: person.address,
+          address: person.address,
+          shortAddress,
+          name: displayName,
+          customName: customName || null,
+          profileName: profileDisplayName,
+          payId,
+          avatarUrl,
+          lastTransactionAt: person.lastTransactionAt,
+          direction: person.direction,
+          lastAmount: person.lastAmount,
+          assetCode: person.assetCode,
+        };
+      })
+    );
+
+    return enrichedPeople;
+  } catch (error) {
+    console.error("Failed to get recent people:", error);
+    return [];
+  }
+}

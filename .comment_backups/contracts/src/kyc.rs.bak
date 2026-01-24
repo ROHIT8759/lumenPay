@@ -1,0 +1,23 @@
+use soroban_sdk::{contract, contractimpl, symbol_short, Address, Env};
+
+#[contract]
+pub struct KycContract;
+
+#[contractimpl]
+impl KycContract {
+    pub fn init(env: Env, admin: Address) {
+         env.storage().instance().set(&symbol_short!("admin"), &admin);
+    }
+
+    pub fn verify(env: Env, user: Address, level: u32) {
+        let admin: Address = env.storage().instance().get(&symbol_short!("admin")).unwrap();
+        admin.require_auth();
+        
+        // 0 = Unverified, 1 = Basic, 2 = Full
+        env.storage().persistent().set(&user, &level);
+    }
+    
+    pub fn get_status(env: Env, user: Address) -> u32 {
+        env.storage().persistent().get(&user).unwrap_or(0)
+    }
+}

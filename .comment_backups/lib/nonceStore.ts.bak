@@ -1,0 +1,71 @@
+/**
+ * Auth Nonce Store
+ * 
+ * Shared nonce storage for wallet-based authentication.
+ * This is a simple in-memory store for the hackathon.
+ * 
+ * In production, use Redis or a database with TTL.
+ */
+
+export interface NonceData {
+    nonce: string;
+    expiresAt: number;
+}
+
+// In-memory nonce store (shared across auth endpoints)
+export const nonceStore = new Map<string, NonceData>();
+
+// Cleanup expired nonces every 60 seconds
+if (typeof setInterval !== 'undefined') {
+    setInterval(() => {
+        const now = Date.now();
+        for (const [publicKey, data] of nonceStore.entries()) {
+            if (data.expiresAt < now) {
+                nonceStore.delete(publicKey);
+            }
+        }
+    }, 60000);
+}
+
+/**
+ * Generate and store a nonce for a public key
+ */
+export function createNonce(publicKey: string): NonceData {
+    const crypto = require('crypto');
+    const nonce = crypto.randomBytes(32).toString('hex');
+    const expiresAt = Date.now() + 5 * 60 * 1000; // 5 minutes
+
+    const data: NonceData = { nonce, expiresAt };
+    nonceStore.set(publicKey, data);
+
+    return data;
+}
+
+/**
+ * Validate and consume a nonce
+ * Returns true if valid, false otherwise
+ */
+export function validateAndConsumeNonce(
+    publicKey: string,
+    nonce: string
+): { valid: boolean; error?: string } {
+    const storedNonce = nonceStore.get(publicKey);
+
+    if (!storedNonce) {
+        return { valid: false, error: 'No nonce found for this address' };
+    }
+
+    if (Date.now() > storedNonce.expiresAt) {
+        nonceStore.delete(publicKey);
+        return { valid: false, error: 'Nonce expired' };
+    }
+
+    if (storedNonce.nonce !== nonce) {
+        return { valid: false, error: 'Invalid nonce' };
+    }
+
+    // Consume the nonce (one-time use)
+    nonceStore.delete(publicKey);
+
+    return { valid: true };
+}

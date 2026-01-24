@@ -1,0 +1,49 @@
+-- ============================================================================
+-- ENHANCED TRANSACTIONS TABLE
+-- Complete user transaction history with all metadata
+-- ============================================================================
+
+-- Add missing columns to transactions table if they don't exist
+ALTER TABLE public.transactions 
+  ADD COLUMN IF NOT EXISTS sender_wallet text,
+  ADD COLUMN IF NOT EXISTS sender_display_name text,
+  ADD COLUMN IF NOT EXISTS receiver_wallet text,
+  ADD COLUMN IF NOT EXISTS receiver_display_name text,
+  ADD COLUMN IF NOT EXISTS pay_id_used text,
+  ADD COLUMN IF NOT EXISTS reference text,
+  ADD COLUMN IF NOT EXISTS tx_direction text check (tx_direction in ('sent', 'received', 'internal')),
+  ADD COLUMN IF NOT EXISTS related_feature text check (related_feature in ('payment', 'loan', 'flash_loan', 'rwa', 'bank_payout', 'reward', 'topup'));
+
+-- Update tx_type to include more types
+ALTER TABLE public.transactions 
+  DROP CONSTRAINT IF EXISTS transactions_tx_type_check;
+
+ALTER TABLE public.transactions
+  ADD CONSTRAINT transactions_tx_type_check 
+  CHECK (tx_type IN (
+    'payment_out', 
+    'payment_in', 
+    'loan_disbursement', 
+    'loan_repayment',
+    'flash_loan_borrow',
+    'flash_loan_repay',
+    'rwa_purchase',
+    'rwa_sale',
+    'bank_payout',
+    'emi_payment', 
+    'reward_claim', 
+    'topup'
+  ));
+
+-- Create index for faster queries
+CREATE INDEX IF NOT EXISTS idx_tx_user_status_created ON public.transactions(user_id, status, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_tx_direction ON public.transactions(tx_direction);
+CREATE INDEX IF NOT EXISTS idx_tx_feature ON public.transactions(related_feature);
+
+-- Add comment for clarity
+COMMENT ON TABLE public.transactions IS 'Complete user transaction history - all financial actions performed through the platform';
+COMMENT ON COLUMN public.transactions.tx_direction IS 'Direction of transaction relative to user: sent, received, or internal';
+COMMENT ON COLUMN public.transactions.related_feature IS 'Which platform feature triggered this transaction';
+COMMENT ON COLUMN public.transactions.sender_display_name IS 'Custom name for sender (from contacts or profile)';
+COMMENT ON COLUMN public.transactions.receiver_display_name IS 'Custom name for receiver (from contacts or profile)';
+COMMENT ON COLUMN public.transactions.pay_id_used IS 'Pay ID used for this transaction if applicable';

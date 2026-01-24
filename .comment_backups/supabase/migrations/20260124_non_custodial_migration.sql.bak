@@ -1,0 +1,50 @@
+-- ============================================================================
+-- LumenPay Non-Custodial Migration
+-- 
+-- This migration removes secret key storage from the server.
+-- After this, the backend can ONLY store public keys.
+-- Private keys are managed entirely on client devices.
+-- ============================================================================
+
+-- Step 1: Make secret_key_enc nullable (for transition period)
+ALTER TABLE public.wallets 
+  ALTER COLUMN secret_key_enc DROP NOT NULL;
+
+-- Step 2: Add wallet_type constraint to distinguish custodial vs non-custodial
+ALTER TABLE public.wallets 
+  DROP CONSTRAINT IF EXISTS wallets_wallet_type_check;
+
+ALTER TABLE public.wallets 
+  ADD CONSTRAINT wallets_wallet_type_check 
+  CHECK (wallet_type IN ('internal', 'external', 'custodial', 'non-custodial'));
+
+-- Step 3: Update existing wallets to mark as non-custodial if they have no secret
+UPDATE public.wallets 
+  SET wallet_type = 'non-custodial' 
+  WHERE secret_key_enc IS NULL;
+
+-- Step 4: Add index on public_key for faster lookups
+CREATE INDEX IF NOT EXISTS idx_wallets_public_key 
+  ON public.wallets(public_key);
+
+-- Step 5: Add unique constraint on public_key
+ALTER TABLE public.wallets 
+  DROP CONSTRAINT IF EXISTS wallets_public_key_unique;
+
+ALTER TABLE public.wallets 
+  ADD CONSTRAINT wallets_public_key_unique 
+  UNIQUE (public_key);
+
+-- ============================================================================
+-- IMPORTANT: Only run this after ALL users have migrated to non-custodial
+-- 
+-- To permanently remove secret key storage (irreversible):
+-- ALTER TABLE public.wallets DROP COLUMN secret_key_enc;
+-- ============================================================================
+
+-- Add comment explaining the architecture
+COMMENT ON TABLE public.wallets IS 
+  'Wallet public keys. Private keys are stored on client devices only (non-custodial).';
+
+COMMENT ON COLUMN public.wallets.secret_key_enc IS 
+  'DEPRECATED: Legacy encrypted secret keys. New wallets do not use this column.';

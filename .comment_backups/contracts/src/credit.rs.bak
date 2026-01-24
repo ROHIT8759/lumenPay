@@ -1,0 +1,23 @@
+use soroban_sdk::{contract, contractimpl, symbol_short, Address, Env};
+
+#[contract]
+pub struct CreditContract;
+
+#[contractimpl]
+impl CreditContract {
+    // Initialize admin
+    pub fn init(env: Env, admin: Address) {
+        env.storage().instance().set(&symbol_short!("admin"), &admin);
+    }
+
+    pub fn set_score(env: Env, user: Address, score: u32) {
+        let admin: Address = env.storage().instance().get(&symbol_short!("admin")).unwrap();
+        admin.require_auth();
+        
+        env.storage().persistent().set(&user, &score);
+    }
+
+    pub fn get_score(env: Env, user: Address) -> u32 {
+        env.storage().persistent().get(&user).unwrap_or(0)
+    }
+}

@@ -1,0 +1,46 @@
+-- ============================================================================
+-- Didit KYC Integration Migration
+-- Adds fields for Didit biometric verification
+-- ============================================================================
+
+-- Add Didit-specific columns to kyc_status table
+ALTER TABLE public.kyc_status 
+  ADD COLUMN IF NOT EXISTS didit_session_id TEXT,
+  ADD COLUMN IF NOT EXISTS confidence_score NUMERIC,
+  ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'NOT_STARTED';
+
+-- Update kyc_provider default to 'didit'
+ALTER TABLE public.kyc_status 
+  ALTER COLUMN kyc_provider SET DEFAULT 'didit';
+
+-- Create index on didit_session_id for webhook lookups
+CREATE INDEX IF NOT EXISTS idx_kyc_didit_session 
+  ON public.kyc_status(didit_session_id);
+
+-- Add constraint for status values
+ALTER TABLE public.kyc_status 
+  DROP CONSTRAINT IF EXISTS kyc_status_check;
+
+ALTER TABLE public.kyc_status 
+  ADD CONSTRAINT kyc_status_check 
+  CHECK (status IN ('NOT_STARTED', 'PENDING', 'APPROVED', 'REJECTED', 'EXPIRED'));
+
+-- ============================================================================
+-- Update profiles table for KYC status display
+-- ============================================================================
+
+-- Ensure kyc_status column accepts our values
+ALTER TABLE public.profiles 
+  DROP CONSTRAINT IF EXISTS profiles_kyc_status_check;
+
+ALTER TABLE public.profiles 
+  ADD CONSTRAINT profiles_kyc_status_check 
+  CHECK (kyc_status IN ('pending', 'in_review', 'verified', 'rejected'));
+
+-- ============================================================================
+-- Comments for documentation
+-- ============================================================================
+
+COMMENT ON COLUMN public.kyc_status.didit_session_id IS 'Session ID from Didit biometric verification';
+COMMENT ON COLUMN public.kyc_status.confidence_score IS 'Confidence score from biometric match (0-1)';
+COMMENT ON COLUMN public.kyc_status.status IS 'Current verification status: NOT_STARTED, PENDING, APPROVED, REJECTED, EXPIRED';

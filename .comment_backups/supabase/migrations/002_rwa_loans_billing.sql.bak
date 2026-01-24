@@ -1,0 +1,449 @@
+-- ============================================================================
+-- MIGRATION: RWA (Real World Assets), Loans & Billing System
+-- ============================================================================
+
+-- ============================================================================
+-- 1. RWA ASSETS REGISTRY (Tokenized Real World Assets)
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS public.rwa_assets (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    
+    -- Stellar Asset Details
+    asset_code VARCHAR(12) NOT NULL,
+    issuer_address TEXT NOT NULL,
+    
+    -- Asset Classification
+    asset_type TEXT NOT NULL CHECK (asset_type IN (
+        'real_estate', 
+        'bond', 
+        'commodity', 
+        'invoice', 
+        'stable_yield',
+        'equity_token'
+    )),
+    
+    -- Asset Metadata
+    name TEXT NOT NULL,
+    description TEXT,
+    detailed_info JSONB DEFAULT '{}', -- Extended metadata
+    image_url TEXT,
+    document_urls JSONB DEFAULT '[]', -- Legal documents, prospectus, etc.
+    
+    -- Financial Details
+    unit_price NUMERIC NOT NULL CHECK (unit_price > 0), -- Price per token in USDC
+    total_supply NUMERIC NOT NULL CHECK (total_supply > 0),
+    available_supply NUMERIC NOT NULL CHECK (available_supply >= 0),
+    min_investment NUMERIC DEFAULT 10, -- Minimum purchase amount
+    max_investment NUMERIC, -- Maximum per user (optional)
+    
+    -- Yield Information
+    yield_type TEXT CHECK (yield_type IN ('fixed', 'variable', 'none')),
+    annual_yield_percent NUMERIC DEFAULT 0, -- e.g., 8.5 for 8.5%
+    yield_frequency TEXT CHECK (yield_frequency IN ('daily', 'weekly', 'monthly', 'quarterly', 'annually', 'none')),
+    last_yield_distribution TIMESTAMP WITH TIME ZONE,
+    
+    -- Risk & Compliance
+    risk_level TEXT NOT NULL CHECK (risk_level IN ('low', 'medium', 'high', 'very_high')),
+    requires_kyc BOOLEAN DEFAULT true,
+    min_kyc_level INT DEFAULT 1, -- 0: none, 1: basic, 2: full
+    accredited_only BOOLEAN DEFAULT false,
+    
+    -- Status
+    status TEXT DEFAULT 'active' CHECK (status IN ('active', 'paused', 'retired', 'pending')),
+    is_featured BOOLEAN DEFAULT false,
+    
+    -- Audit Trail
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()),
+    
+    CONSTRAINT unique_stellar_asset UNIQUE(asset_code, issuer_address)
+);
+
+CREATE INDEX idx_rwa_assets_type ON public.rwa_assets(asset_type);
+CREATE INDEX idx_rwa_assets_status ON public.rwa_assets(status);
+CREATE INDEX idx_rwa_assets_risk ON public.rwa_assets(risk_level);
+
+ALTER TABLE public.rwa_assets ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Anyone can view active RWA assets"
+    ON public.rwa_assets FOR SELECT
+    USING (status = 'active');
+
+-- ============================================================================
+-- 2. RWA HOLDINGS (User Portfolios)
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS public.rwa_holdings (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
+    asset_id UUID REFERENCES public.rwa_assets(id) ON DELETE CASCADE NOT NULL,
+    
+    -- Holding Details
+    quantity NUMERIC NOT NULL CHECK (quantity > 0),
+    average_buy_price NUMERIC NOT NULL,
+    total_invested NUMERIC NOT NULL,
+    
+    -- Yield Tracking
+    total_yield_earned NUMERIC DEFAULT 0,
+    last_yield_claimed TIMESTAMP WITH TIME ZONE,
+    pending_yield NUMERIC DEFAULT 0,
+    
+    -- Trustline Status
+    trustline_established BOOLEAN DEFAULT false,
+    trustline_tx_hash TEXT,
+    
+    -- Timestamps
+    first_purchase_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()),
+    last_transaction_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()),
+    
+    CONSTRAINT unique_user_asset_holding UNIQUE(user_id, asset_id)
+);
+
+CREATE INDEX idx_rwa_holdings_user ON public.rwa_holdings(user_id);
+CREATE INDEX idx_rwa_holdings_asset ON public.rwa_holdings(asset_id);
+
+ALTER TABLE public.rwa_holdings ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view own holdings"
+    ON public.rwa_holdings FOR SELECT
+    USING (auth.uid() = user_id);
+
+-- ============================================================================
+-- 3. RWA TRANSACTIONS (Buy/Sell History)
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS public.rwa_transactions (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
+    asset_id UUID REFERENCES public.rwa_assets(id) ON DELETE CASCADE NOT NULL,
+    
+    -- Transaction Details
+    tx_type TEXT NOT NULL CHECK (tx_type IN ('buy', 'sell', 'yield_claim', 'transfer_in', 'transfer_out')),
+    quantity NUMERIC NOT NULL,
+    price_per_unit NUMERIC NOT NULL,
+    total_amount NUMERIC NOT NULL,
+    fee NUMERIC DEFAULT 0,
+    
+    -- Stellar Transaction
+    stellar_tx_hash TEXT,
+    
+    -- Status
+    status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'processing', 'success', 'failed', 'cancelled')),
+    error_message TEXT,
+    
+    -- Timestamps
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()),
+    completed_at TIMESTAMP WITH TIME ZONE
+);
+
+CREATE INDEX idx_rwa_tx_user ON public.rwa_transactions(user_id);
+CREATE INDEX idx_rwa_tx_asset ON public.rwa_transactions(asset_id);
+CREATE INDEX idx_rwa_tx_status ON public.rwa_transactions(status);
+
+ALTER TABLE public.rwa_transactions ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view own RWA transactions"
+    ON public.rwa_transactions FOR SELECT
+    USING (auth.uid() = user_id);
+
+-- ============================================================================
+-- 4. COLLATERAL-BASED LOANS
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS public.loans (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
+    
+    -- Loan Type
+    loan_type TEXT NOT NULL CHECK (loan_type IN ('collateral', 'flash')),
+    
+    -- Loan Terms
+    principal_amount NUMERIC NOT NULL CHECK (principal_amount > 0),
+    loan_amount NUMERIC NOT NULL, -- Amount user receives (after any deductions)
+    interest_rate_bps INT NOT NULL, -- Basis points (e.g., 1200 = 12% APR)
+    tenure_days INT NOT NULL,
+    
+    -- Repayment Tracking
+    amount_repaid NUMERIC DEFAULT 0,
+    amount_outstanding NUMERIC NOT NULL,
+    interest_accrued NUMERIC DEFAULT 0,
+    
+    -- Status
+    status TEXT DEFAULT 'pending' CHECK (status IN (
+        'pending', 'active', 'repaid', 'defaulted', 'liquidated', 'cancelled'
+    )),
+    
+    -- Soroban Contract Reference
+    contract_address TEXT,
+    contract_loan_id TEXT,
+    
+    -- Timestamps
+    requested_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()),
+    disbursed_at TIMESTAMP WITH TIME ZONE,
+    due_date TIMESTAMP WITH TIME ZONE,
+    repaid_at TIMESTAMP WITH TIME ZONE,
+    
+    -- Risk Management
+    ltv_ratio NUMERIC, -- Loan-to-value ratio at origination
+    liquidation_threshold NUMERIC DEFAULT 80, -- Liquidate if LTV exceeds this %
+    
+    -- Meta
+    notes TEXT,
+    meta_data JSONB DEFAULT '{}'
+);
+
+CREATE INDEX idx_loans_user ON public.loans(user_id);
+CREATE INDEX idx_loans_status ON public.loans(status);
+CREATE INDEX idx_loans_type ON public.loans(loan_type);
+
+ALTER TABLE public.loans ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view own loans"
+    ON public.loans FOR SELECT
+    USING (auth.uid() = user_id);
+
+-- ============================================================================
+-- 5. LOAN COLLATERAL
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS public.loan_collateral (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    loan_id UUID REFERENCES public.loans(id) ON DELETE CASCADE NOT NULL,
+    user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
+    
+    -- Collateral Details
+    collateral_type TEXT NOT NULL CHECK (collateral_type IN ('usdc', 'xlm', 'rwa')),
+    asset_code TEXT NOT NULL,
+    asset_issuer TEXT, -- NULL for native XLM
+    
+    -- Amounts
+    amount NUMERIC NOT NULL CHECK (amount > 0),
+    value_at_deposit NUMERIC NOT NULL, -- USD value at time of deposit
+    current_value NUMERIC, -- Updated periodically
+    
+    -- Lock Status
+    is_locked BOOLEAN DEFAULT true,
+    locked_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()),
+    released_at TIMESTAMP WITH TIME ZONE,
+    
+    -- Stellar TX
+    deposit_tx_hash TEXT,
+    release_tx_hash TEXT,
+    
+    -- Contract
+    contract_collateral_id TEXT
+);
+
+CREATE INDEX idx_collateral_loan ON public.loan_collateral(loan_id);
+CREATE INDEX idx_collateral_user ON public.loan_collateral(user_id);
+
+ALTER TABLE public.loan_collateral ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view own collateral"
+    ON public.loan_collateral FOR SELECT
+    USING (auth.uid() = user_id);
+
+-- ============================================================================
+-- 6. FLASH LOAN LOGS (Atomic Same-Block Loans)
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS public.flash_loan_logs (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
+    
+    -- Flash Loan Details
+    amount NUMERIC NOT NULL,
+    asset_code TEXT NOT NULL DEFAULT 'USDC',
+    fee_amount NUMERIC NOT NULL,
+    
+    -- Execution
+    purpose TEXT, -- arbitrage, rebalancing, etc.
+    callback_contract TEXT, -- Contract that executed the callback
+    
+    -- Stellar TX
+    tx_hash TEXT UNIQUE,
+    
+    -- Status
+    status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'success', 'failed')),
+    error_message TEXT,
+    
+    -- Timing (all in same block)
+    executed_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()),
+    block_number BIGINT,
+    ledger_sequence INT
+);
+
+CREATE INDEX idx_flash_logs_user ON public.flash_loan_logs(user_id);
+CREATE INDEX idx_flash_logs_status ON public.flash_loan_logs(status);
+
+ALTER TABLE public.flash_loan_logs ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view own flash loan logs"
+    ON public.flash_loan_logs FOR SELECT
+    USING (auth.uid() = user_id);
+
+-- ============================================================================
+-- 7. ENHANCED KYC STATUS
+-- ============================================================================
+-- Add new columns to existing kyc_status if they don't exist
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                   WHERE table_name = 'kyc_status' AND column_name = 'on_chain_verified') THEN
+        ALTER TABLE public.kyc_status ADD COLUMN on_chain_verified BOOLEAN DEFAULT false;
+    END IF;
+    
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                   WHERE table_name = 'kyc_status' AND column_name = 'on_chain_tx_hash') THEN
+        ALTER TABLE public.kyc_status ADD COLUMN on_chain_tx_hash TEXT;
+    END IF;
+    
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                   WHERE table_name = 'kyc_status' AND column_name = 'verification_hash') THEN
+        ALTER TABLE public.kyc_status ADD COLUMN verification_hash TEXT;
+    END IF;
+    
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                   WHERE table_name = 'kyc_status' AND column_name = 'document_verified') THEN
+        ALTER TABLE public.kyc_status ADD COLUMN document_verified BOOLEAN DEFAULT false;
+    END IF;
+    
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                   WHERE table_name = 'kyc_status' AND column_name = 'address_verified') THEN
+        ALTER TABLE public.kyc_status ADD COLUMN address_verified BOOLEAN DEFAULT false;
+    END IF;
+END $$;
+
+-- ============================================================================
+-- 8. YIELD DISTRIBUTIONS (For RWA Assets)
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS public.yield_distributions (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    asset_id UUID REFERENCES public.rwa_assets(id) ON DELETE CASCADE NOT NULL,
+    
+    -- Distribution Details
+    distribution_date DATE NOT NULL,
+    yield_rate_percent NUMERIC NOT NULL,
+    total_distributed NUMERIC NOT NULL,
+    
+    -- Status
+    status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'processing', 'completed', 'failed')),
+    processed_at TIMESTAMP WITH TIME ZONE,
+    
+    -- Records count
+    holders_paid INT DEFAULT 0,
+    
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
+);
+
+CREATE INDEX idx_yield_dist_asset ON public.yield_distributions(asset_id);
+
+-- ============================================================================
+-- 9. SEED RWA ASSETS (Sample Data for Testing)
+-- ============================================================================
+INSERT INTO public.rwa_assets (
+    asset_code, issuer_address, asset_type, name, description,
+    unit_price, total_supply, available_supply, min_investment,
+    yield_type, annual_yield_percent, yield_frequency,
+    risk_level, requires_kyc, min_kyc_level, status, is_featured, detailed_info
+) VALUES 
+(
+    'REALTY01',
+    'GDQP2KPQGKIHYJGXNUIYOMHARUARCA7DJT5FO2FFOOUJ3VQ4OYVN4OC4',
+    'real_estate',
+    'Mumbai Prime Real Estate Fund',
+    'Fractional ownership in premium commercial real estate in Mumbai BKC area. Quarterly rental income distribution.',
+    100.00,
+    100000,
+    85000,
+    100,
+    'fixed',
+    8.5,
+    'quarterly',
+    'medium',
+    true,
+    1,
+    'active',
+    true,
+    '{"location": "Mumbai BKC", "property_type": "Commercial Office", "occupancy_rate": 95, "lease_term_years": 5}'::jsonb
+),
+(
+    'TBOND01',
+    'GDQP2KPQGKIHYJGXNUIYOMHARUARCA7DJT5FO2FFOOUJ3VQ4OYVN4OC4',
+    'bond',
+    'India Treasury Bond Token',
+    'Tokenized Indian government securities backed by sovereign guarantee. Monthly interest payments.',
+    1000.00,
+    50000,
+    42000,
+    1000,
+    'fixed',
+    7.2,
+    'monthly',
+    'low',
+    true,
+    1,
+    'active',
+    true,
+    '{"maturity_date": "2030-01-15", "coupon_rate": 7.2, "issuer": "Government of India"}'::jsonb
+),
+(
+    'GOLD01',
+    'GDQP2KPQGKIHYJGXNUIYOMHARUARCA7DJT5FO2FFOOUJ3VQ4OYVN4OC4',
+    'commodity',
+    'Digital Gold Token',
+    'Each token represents 1 gram of 24K gold stored in LBMA-certified vaults. Fully redeemable.',
+    65.00,
+    1000000,
+    750000,
+    65,
+    'none',
+    0,
+    'none',
+    'low',
+    false,
+    0,
+    'active',
+    false,
+    '{"backing": "Physical Gold", "storage": "LBMA Vault", "purity": "99.99%", "redeemable": true}'::jsonb
+),
+(
+    'INVOICE1',
+    'GDQP2KPQGKIHYJGXNUIYOMHARUARCA7DJT5FO2FFOOUJ3VQ4OYVN4OC4',
+    'invoice',
+    'Trade Finance Invoice Pool',
+    'Diversified pool of verified trade invoices from top-rated corporates. 30-90 day maturities.',
+    50.00,
+    200000,
+    180000,
+    500,
+    'fixed',
+    12.0,
+    'monthly',
+    'medium',
+    true,
+    2,
+    'active',
+    false,
+    '{"pool_size": 50, "average_maturity_days": 60, "default_insurance": true}'::jsonb
+),
+(
+    'STABLE01',
+    'GDQP2KPQGKIHYJGXNUIYOMHARUARCA7DJT5FO2FFOOUJ3VQ4OYVN4OC4',
+    'stable_yield',
+    'Stable Yield Fund',
+    'Low-risk yield strategy combining T-bills and AAA corporate bonds. Daily yield accrual.',
+    10.00,
+    5000000,
+    4200000,
+    10,
+    'variable',
+    5.5,
+    'daily',
+    'low',
+    false,
+    0,
+    'active',
+    true,
+    '{"strategy": "T-Bill + AAA Bonds", "nav_frequency": "daily", "withdrawal_period": "T+1"}'::jsonb
+)
+ON CONFLICT (asset_code, issuer_address) DO NOTHING;
+
+-- ============================================================================
+-- END OF MIGRATION
+-- ============================================================================

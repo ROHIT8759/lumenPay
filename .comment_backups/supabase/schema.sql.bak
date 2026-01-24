@@ -1,0 +1,369 @@
+-- ============================================================================
+-- PRODUCTION FINTECH SCHEMA WITH RLS & SECURITY
+-- ============================================================================
+
+-- Enable UUID extension
+create extension if not exists "uuid-ossp";
+create extension if not exists "pgcrypto";
+
+-- ============================================================================
+-- 1. PROFILES (User Identity)
+-- ============================================================================
+create table public.profiles (
+  id uuid references auth.users not null primary key,
+  email text not null,
+  phone_number text,
+  full_name text not null,
+  avatar_url text,
+  country_code text default 'IN',
+  language text default 'en',
+  timezone text default 'Asia/Kolkata',
+  kyc_status text default 'pending', -- pending, in_review, verified, rejected
+  daily_limit numeric default 100000, -- in smallest unit
+  monthly_limit numeric default 1000000,
+  spending_today numeric default 0,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  updated_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  constraint full_name_length check (char_length(full_name) >= 3)
+);
+
+alter table public.profiles enable row level security;
+
+create policy "Users can view own profile"
+  on public.profiles
+  for select
+  using (auth.uid() = id);
+
+create policy "Users can update own profile"
+  on public.profiles
+  for update
+  using (auth.uid() = id)
+  with check (auth.uid() = id);
+
+-- ============================================================================
+-- 2. WALLETS (Internal Custodial Wallets - Production Grade)
+-- ============================================================================
+create table public.wallets (
+  id uuid default uuid_generate_v4() primary key,
+  user_id uuid references public.profiles(id) on delete cascade not null,
+  public_key text not null unique,
+  secret_key_enc text not null, -- Encrypted with WALLET_ENCRYPTION_KEY (server-side only)
+  wallet_type text default 'internal' check (wallet_type in ('internal', 'external')),
+  network text default 'testnet' check (network in ('testnet', 'public')),
+  balance_native numeric default 0, -- XLM balance
+  balance_usdc numeric default 0, -- USDC balance
+  last_sync_at timestamp with time zone,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  updated_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  constraint one_wallet_per_user unique(user_id)
+);
+
+alter table public.wallets enable row level security;
+
+create policy "Users can view own wallet"
+  on public.wallets
+  for select
+  using (auth.uid() = user_id);
+
+create policy "Only backend can update wallet"
+  on public.wallets
+  for update
+  using (false); -- Prevent direct updates from client
+
+-- ============================================================================
+-- 3. KYC STATUS & COMPLIANCE
+-- ============================================================================
+create table public.kyc_status (
+  id uuid default uuid_generate_v4() primary key,
+  user_id uuid references public.profiles(id) on delete cascade not null unique,
+  verification_level int default 0, -- 0: none, 1: basic, 2: full
+  is_verified boolean default false,
+  identity_document_hash text,
+  address_document_hash text,
+  selfie_hash text,
+  kyc_provider text, -- external service used (e.g., 'trulioo')
+  kyc_reference_id text,
+  verified_at timestamp with time zone,
+  expires_at timestamp with time zone,
+  rejection_reason text,
+  created_at timestamp with time zone default timezone('utc'::text, now()),
+  updated_at timestamp with time zone default timezone('utc'::text, now())
+);
+
+alter table public.kyc_status enable row level security;
+
+create policy "Users can view own KYC"
+  on public.kyc_status
+  for select
+  using (auth.uid() = user_id);
+
+-- ============================================================================
+-- 4. TRANSACTIONS (Complete Financial Record)
+-- ============================================================================
+create table public.transactions (
+  id uuid default uuid_generate_v4() primary key,
+  user_id uuid references public.profiles(id) on delete cascade not null,
+  tx_hash text unique, -- Stellar tx hash (initially null until confirmed)
+  tx_type text not null check (tx_type in ('payment_out', 'payment_in', 'loan_disbursement', 'emi_payment', 'reward_claim', 'topup')),
+  amount numeric not null check (amount > 0),
+  asset_code text default 'USDC' check (asset_code in ('USDC', 'XLM', 'native')),
+  recipient_address text,
+  recipient_name text,
+  memo text, -- Payment reference/ID
+  status text default 'pending' check (status in ('pending', 'processing', 'success', 'failed', 'cancelled')),
+  error_message text,
+  fee numeric default 0,
+  meta_data jsonb default '{}', -- Additional context (loan_id, emi_id, etc)
+  created_at timestamp with time zone default timezone('utc'::text, now()),
+  confirmed_at timestamp with time zone,
+  constraint amount_in_stroop check (amount >= 1)
+);
+
+create index idx_tx_user_created on public.transactions(user_id, created_at desc);
+create index idx_tx_hash on public.transactions(tx_hash);
+create index idx_tx_status on public.transactions(status);
+
+alter table public.transactions enable row level security;
+
+create policy "Users can view own transactions"
+  on public.transactions
+  for select
+  using (auth.uid() = user_id);
+
+-- ============================================================================
+-- 5. CONTACTS (People - Recent Interactions)
+-- ============================================================================
+create table public.contacts (
+  id uuid default uuid_generate_v4() primary key,
+  user_id uuid references public.profiles(id) on delete cascade not null,
+  contact_name text not null,
+  contact_address text not null,
+  contact_type text default 'recent' check (contact_type in ('recent', 'favorite', 'saved')),
+  last_transacted_at timestamp with time zone,
+  is_favorite boolean default false,
+  notes text,
+  created_at timestamp with time zone default timezone('utc'::text, now()),
+  updated_at timestamp with time zone default timezone('utc'::text, now()),
+  constraint unique_contact unique(user_id, contact_address)
+);
+
+alter table public.contacts enable row level security;
+
+create policy "Users can manage own contacts"
+  on public.contacts
+  for select
+  using (auth.uid() = user_id);
+
+-- ============================================================================
+-- 6. LOANS (Credit Products)
+-- ============================================================================
+create table public.loans (
+  id uuid default uuid_generate_v4() primary key,
+  user_id uuid references public.profiles(id) on delete cascade not null,
+  loan_type text default 'personal' check (loan_type in ('personal', 'salary_advance')),
+  principal_amount numeric not null check (principal_amount > 0),
+  disbursed_amount numeric default 0,
+  amount_outstanding numeric not null,
+  interest_rate numeric not null, -- Annual percentage rate (e.g., 12.5)
+  tenure_months int not null check (tenure_months > 0),
+  status text default 'active' check (status in ('active', 'closed', 'defaulted', 'pending_approval')),
+  start_date timestamp with time zone default timezone('utc'::text, now()),
+  end_date timestamp with time zone,
+  next_emi_date timestamp with time zone,
+  emi_due_amount numeric,
+  contract_address text, -- Soroban contract if using smart contracts
+  meta_data jsonb default '{}',
+  created_at timestamp with time zone default timezone('utc'::text, now()),
+  updated_at timestamp with time zone default timezone('utc'::text, now())
+);
+
+create index idx_loan_user_status on public.loans(user_id, status);
+
+alter table public.loans enable row level security;
+
+create policy "Users can view own loans"
+  on public.loans
+  for select
+  using (auth.uid() = user_id);
+
+-- ============================================================================
+-- 7. EMI SCHEDULES (Installment Payment Schedule)
+-- ============================================================================
+create table public.emi_schedules (
+  id uuid default uuid_generate_v4() primary key,
+  loan_id uuid references public.loans(id) on delete cascade not null,
+  installment_number int not null check (installment_number > 0),
+  due_date timestamp with time zone not null,
+  principal_amount numeric not null,
+  interest_amount numeric not null,
+  total_due numeric not null,
+  amount_paid numeric default 0,
+  status text default 'pending' check (status in ('pending', 'paid', 'overdue', 'waived')),
+  paid_at timestamp with time zone,
+  payment_tx_id uuid references public.transactions(id),
+  created_at timestamp with time zone default timezone('utc'::text, now()),
+  constraint emi_unique unique(loan_id, installment_number)
+);
+
+create index idx_emi_due_date on public.emi_schedules(due_date);
+create index idx_emi_status on public.emi_schedules(status);
+
+alter table public.emi_schedules enable row level security;
+
+create policy "Users can view own EMI schedules"
+  on public.emi_schedules
+  for select
+  using (
+    exists (
+      select 1 from public.loans
+      where loans.id = emi_schedules.loan_id
+      and loans.user_id = auth.uid()
+    )
+  );
+
+-- ============================================================================
+-- 8. REWARDS & LOYALTY
+-- ============================================================================
+create table public.rewards (
+  id uuid default uuid_generate_v4() primary key,
+  user_id uuid references public.profiles(id) on delete cascade not null,
+  reward_type text not null check (reward_type in ('cashback', 'referral', 'milestone', 'bonus')),
+  amount numeric not null check (amount > 0),
+  asset_code text default 'USDC',
+  description text,
+  status text default 'pending' check (status in ('pending', 'approved', 'claimed', 'expired')),
+  expires_at timestamp with time zone,
+  claimed_at timestamp with time zone,
+  claim_tx_id uuid references public.transactions(id),
+  meta_data jsonb default '{}',
+  created_at timestamp with time zone default timezone('utc'::text, now()),
+  updated_at timestamp with time zone default timezone('utc'::text, now())
+);
+
+create index idx_rewards_user_status on public.rewards(user_id, status);
+
+alter table public.rewards enable row level security;
+
+create policy "Users can view own rewards"
+  on public.rewards
+  for select
+  using (auth.uid() = user_id);
+
+-- ============================================================================
+-- 9. REFERRAL PROGRAM
+-- ============================================================================
+create table public.referrals (
+  id uuid default uuid_generate_v4() primary key,
+  referrer_id uuid references public.profiles(id) on delete cascade not null,
+  referee_id uuid references public.profiles(id) on delete set null,
+  referral_code text not null unique,
+  status text default 'pending' check (status in ('pending', 'activated', 'rewarded')),
+  reward_amount numeric,
+  claimed_at timestamp with time zone,
+  created_at timestamp with time zone default timezone('utc'::text, now())
+);
+
+create index idx_referral_code on public.referrals(referral_code);
+
+alter table public.referrals enable row level security;
+
+create policy "Users can view own referrals"
+  on public.referrals
+  for select
+  using (auth.uid() = referrer_id or auth.uid() = referee_id);
+
+-- ============================================================================
+-- 10. OFFERS & PROMOTIONS
+-- ============================================================================
+create table public.offers (
+  id uuid default uuid_generate_v4() primary key,
+  title text not null,
+  description text,
+  offer_type text check (offer_type in ('cashback', 'discount', 'bonus', 'special')),
+  terms_conditions text,
+  image_url text,
+  code text unique,
+  discount_amount numeric,
+  discount_percent numeric,
+  min_transaction_amount numeric,
+  max_users int,
+  used_count int default 0,
+  validity_start timestamp with time zone default timezone('utc'::text, now()),
+  validity_end timestamp with time zone,
+  is_active boolean default true,
+  created_at timestamp with time zone default timezone('utc'::text, now()),
+  updated_at timestamp with time zone default timezone('utc'::text, now())
+);
+
+alter table public.offers enable row level security;
+
+create policy "Anyone can view active offers"
+  on public.offers
+  for select
+  using (is_active = true and validity_end > now());
+
+-- ============================================================================
+-- 11. AUDIT LOG (Compliance & Security)
+-- ============================================================================
+create table public.audit_log (
+  id uuid default uuid_generate_v4() primary key,
+  user_id uuid references public.profiles(id) on delete set null,
+  action text not null,
+  resource_type text,
+  resource_id text,
+  details jsonb default '{}',
+  ip_address text,
+  user_agent text,
+  created_at timestamp with time zone default timezone('utc'::text, now())
+);
+
+create index idx_audit_user_created on public.audit_log(user_id, created_at);
+
+alter table public.audit_log enable row level security;
+
+create policy "Only admins can view audit log"
+  on public.audit_log
+  for select
+  using (false); -- Restrict to backend service role
+
+-- ============================================================================
+-- 12. RATE LIMIT TRACKING
+-- ============================================================================
+create table public.rate_limits (
+  id uuid default uuid_generate_v4() primary key,
+  user_id uuid references public.profiles(id) on delete cascade not null,
+  action text not null, -- 'payment', 'login', 'api_call', etc
+  window_start timestamp with time zone not null,
+  count int default 1,
+  constraint unique_rate_limit unique(user_id, action, window_start)
+);
+
+create index idx_rate_limit_user_action on public.rate_limits(user_id, action);
+
+-- ============================================================================
+-- END OF SCHEMA
+-- ============================================================================
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+-- RLS POLICIES (Row Level Security)
+alter table public.profiles enable row level security;
+alter table public.wallets enable row level security;
+alter table public.kyc_status enable row level security;
+alter table public.people enable row level security;
+alter table public.loans enable row level security;
+alter table public.emi_schedules enable row level security;
+alter table public.transactions enable row level security;
+
+-- Policies
+create policy "Public profiles are viewable by everyone." on public.profiles for select using ( true );
+create policy "Users can insert their own profile." on public.profiles for insert with check ( auth.uid() = id );
+create policy "Users can update own profile." on public.profiles for update using ( auth.uid() = id );
+
+-- Wallet Security: users can only see their own wallets
+create policy "Users can view own wallet" on public.wallets for select using ( auth.uid() = user_id );
+-- IMPORTANT: In a real app, the secret_key_enc should NEVER be exposed to the client directly via simple select 
+-- without strict controls. But for this MVP architecture where the backend might need it, we allow select for the owner.
+-- Ideally, we use an RPC / Edge Function to sign transactions, so the key never leaves the server boundary.
+
+create policy "Users can view own transactions" on public.transactions for select using ( auth.uid() = user_id );

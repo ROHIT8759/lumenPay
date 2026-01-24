@@ -1,0 +1,187 @@
+/**
+ * QR Sync System for LumenVault
+ * 
+ * Enables secure wallet transfer between devices:
+ * - Mobile → Web: Scan QR on web to import wallet from mobile
+ * - Web → Mobile: Display QR on web for mobile to scan
+ * 
+ * Security:
+ * - Wallet data is encrypted with a user-provided PIN
+ * - QR contains encrypted payload, not raw secret key
+ * - Transfer expires after 5 minutes
+ */
+
+import { Keypair } from '@stellar/stellar-sdk';
+import {
+    WalletBackup,
+    encryptBackupForTransfer,
+    decryptBackupFromTransfer,
+    createWalletBackup
+} from './mnemonicSupport';
+
+// QR payload version for future compatibility
+const QR_VERSION = 1;
+
+// Transfer expiry time (5 minutes)
+const TRANSFER_EXPIRY_MS = 5 * 60 * 1000;
+
+export interface QRSyncPayload {
+    version: number;
+    type: 'wallet_transfer';
+    data: string; // Encrypted wallet backup
+    expires: number; // Unix timestamp
+    checksum: string; // First 8 chars of public key (for verification)
+}
+
+export interface SyncResult {
+    success: boolean;
+    publicKey?: string;
+    error?: string;
+}
+
+/**
+ * Generate QR payload for wallet transfer
+ */
+export async function generateSyncQRPayload(
+    secretKey: string,
+    pin: string,
+    network: 'testnet' | 'public' = 'testnet'
+): Promise<{ payload: string; publicKey: string }> {
+    // Create keypair from secret
+    const keypair = Keypair.fromSecret(secretKey);
+
+    // Create backup
+    const backup = createWalletBackup(keypair, network);
+
+    // Encrypt for transfer
+    const encryptedData = await encryptBackupForTransfer(backup, pin);
+
+    // Create QR payload
+    const qrPayload: QRSyncPayload = {
+        version: QR_VERSION,
+        type: 'wallet_transfer',
+        data: encryptedData,
+        expires: Date.now() + TRANSFER_EXPIRY_MS,
+        checksum: keypair.publicKey().substring(0, 8),
+    };
+
+    // Return as JSON string (to be encoded in QR)
+    return {
+        payload: JSON.stringify(qrPayload),
+        publicKey: keypair.publicKey(),
+    };
+}
+
+/**
+ * Parse and decrypt QR payload to recover wallet
+ */
+export async function parseSyncQRPayload(
+    qrData: string,
+    pin: string
+): Promise<SyncResult> {
+    try {
+        // Parse JSON
+        const payload: QRSyncPayload = JSON.parse(qrData);
+
+        // Validate version
+        if (payload.version !== QR_VERSION) {
+            return {
+                success: false,
+                error: `Unsupported QR version: ${payload.version}`
+            };
+        }
+
+        // Check type
+        if (payload.type !== 'wallet_transfer') {
+            return {
+                success: false,
+                error: 'Invalid QR code type'
+            };
+        }
+
+        // Check expiry
+        if (Date.now() > payload.expires) {
+            return {
+                success: false,
+                error: 'Transfer expired. Generate a new QR code.'
+            };
+        }
+
+        // Decrypt wallet backup
+        const backup = await decryptBackupFromTransfer(payload.data, pin);
+
+        // Verify checksum
+        if (!backup.publicKey.startsWith(payload.checksum)) {
+            return {
+                success: false,
+                error: 'Invalid PIN or corrupted data'
+            };
+        }
+
+        // Validate keypair
+        try {
+            const keypair = Keypair.fromSecret(backup.secretKey);
+            if (keypair.publicKey() !== backup.publicKey) {
+                throw new Error('Key mismatch');
+            }
+        } catch {
+            return {
+                success: false,
+                error: 'Invalid wallet data'
+            };
+        }
+
+        return {
+            success: true,
+            publicKey: backup.publicKey,
+        };
+    } catch (error: any) {
+        return {
+            success: false,
+            error: error.message || 'Failed to parse QR code',
+        };
+    }
+}
+
+/**
+ * Get the decrypted wallet backup (after successful parse)
+ */
+export async function getWalletFromSyncQR(
+    qrData: string,
+    pin: string
+): Promise<WalletBackup | null> {
+    try {
+        const payload: QRSyncPayload = JSON.parse(qrData);
+
+        if (Date.now() > payload.expires) {
+            return null;
+        }
+
+        const backup = await decryptBackupFromTransfer(payload.data, pin);
+
+        // Verify
+        const keypair = Keypair.fromSecret(backup.secretKey);
+        if (keypair.publicKey() !== backup.publicKey) {
+            return null;
+        }
+
+        return backup;
+    } catch {
+        return null;
+    }
+}
+
+/**
+ * Generate a simple numeric PIN
+ */
+export function generateTransferPin(): string {
+    const pin = Math.floor(100000 + Math.random() * 900000).toString();
+    return pin;
+}
+
+/**
+ * Validate PIN format
+ */
+export function validatePin(pin: string): boolean {
+    return /^\d{6}$/.test(pin);
+}

@@ -1,0 +1,166 @@
+-- ============================================================================
+-- MIGRATION: Contact Names & User Display Names
+-- ============================================================================
+
+-- 1. Add display_name to profiles (if not exists via full_name)
+-- The full_name column already exists, we'll use it as display_name
+-- Add a separate editable display_name for public visibility
+ALTER TABLE public.profiles 
+ADD COLUMN IF NOT EXISTS display_name text;
+
+-- 2. Modify contacts table to support custom naming
+-- The existing contacts table has contact_name but we need to ensure
+-- it's for user-defined custom names
+
+-- Add index for faster lookups
+CREATE INDEX IF NOT EXISTS idx_contacts_owner_wallet 
+ON public.contacts(user_id, contact_address);
+
+-- 3. Add sender_display_name to transactions
+ALTER TABLE public.transactions
+ADD COLUMN IF NOT EXISTS sender_address text,
+ADD COLUMN IF NOT EXISTS sender_display_name text;
+
+-- 4. Create function to get contact display name
+-- Returns: custom_name > sender_display_name > short_address
+CREATE OR REPLACE FUNCTION get_contact_display_name(
+    p_owner_user_id uuid,
+    p_contact_address text
+) RETURNS text AS $$
+DECLARE
+    v_custom_name text;
+    v_profile_name text;
+    v_short_address text;
+BEGIN
+    -- First check for custom name in contacts
+    SELECT custom_name INTO v_custom_name
+    FROM public.contacts
+    WHERE user_id = p_owner_user_id 
+    AND contact_address = p_contact_address
+    AND custom_name IS NOT NULL
+    LIMIT 1;
+    
+    IF v_custom_name IS NOT NULL THEN
+        RETURN v_custom_name;
+    END IF;
+    
+    -- Next check for profile display name
+    SELECT COALESCE(p.display_name, p.full_name) INTO v_profile_name
+    FROM public.wallets w
+    JOIN public.profiles p ON w.user_id = p.id
+    WHERE w.public_key = p_contact_address
+    LIMIT 1;
+    
+    IF v_profile_name IS NOT NULL THEN
+        RETURN v_profile_name;
+    END IF;
+    
+    -- Fallback to short address
+    RETURN CONCAT(LEFT(p_contact_address, 4), '...', RIGHT(p_contact_address, 4));
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- 5. Add RLS policies for contacts management
+DROP POLICY IF EXISTS "Users can manage own contacts" ON public.contacts;
+
+CREATE POLICY "Users can view own contacts"
+    ON public.contacts
+    FOR SELECT
+    USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can insert own contacts"
+    ON public.contacts
+    FOR INSERT
+    WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can update own contacts"
+    ON public.contacts
+    FOR UPDATE
+    USING (auth.uid() = user_id)
+    WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can delete own contacts"
+    ON public.contacts
+    FOR DELETE
+    USING (auth.uid() = user_id);
+
+-- 6. Add RLS policy for profiles display_name update
+CREATE POLICY "Users can update own display name"
+    ON public.profiles
+    FOR UPDATE
+    USING (auth.uid() = id)
+    WITH CHECK (auth.uid() = id);
+
+-- 7. Create a view for enriched contacts with display names
+CREATE OR REPLACE VIEW public.contacts_with_display AS
+SELECT 
+    c.id,
+    c.user_id,
+    c.contact_address,
+    c.contact_name,
+    c.contact_type,
+    c.is_favorite,
+    c.notes,
+    c.last_transacted_at,
+    c.created_at,
+    c.updated_at,
+    -- Get the counterpart's profile info
+    p.display_name as counterpart_display_name,
+    p.full_name as counterpart_full_name,
+    p.avatar_url as counterpart_avatar,
+    p.pay_id as counterpart_pay_id
+FROM public.contacts c
+LEFT JOIN public.wallets w ON w.public_key = c.contact_address
+LEFT JOIN public.profiles p ON p.id = w.user_id;
+
+-- 8. Add validation function for display names
+CREATE OR REPLACE FUNCTION validate_display_name(name text)
+RETURNS boolean AS $$
+BEGIN
+    -- Check length (3-50 characters)
+    IF name IS NULL OR char_length(name) < 1 OR char_length(name) > 50 THEN
+        RETURN false;
+    END IF;
+    
+    -- Check for script injection (basic XSS prevention)
+    IF name ~ '[<>]' OR name ~ '(?i)script' OR name ~ '(?i)javascript:' THEN
+        RETURN false;
+    END IF;
+    
+    RETURN true;
+END;
+$$ LANGUAGE plpgsql;
+
+-- 9. Add trigger to validate names before insert/update
+CREATE OR REPLACE FUNCTION validate_contact_name_trigger()
+RETURNS trigger AS $$
+BEGIN
+    IF NEW.contact_name IS NOT NULL AND NOT validate_display_name(NEW.contact_name) THEN
+        RAISE EXCEPTION 'Invalid contact name: must be 1-50 characters without HTML tags';
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS validate_contact_name ON public.contacts;
+CREATE TRIGGER validate_contact_name
+    BEFORE INSERT OR UPDATE ON public.contacts
+    FOR EACH ROW
+    EXECUTE FUNCTION validate_contact_name_trigger();
+
+-- 10. Add trigger to validate profile display name
+CREATE OR REPLACE FUNCTION validate_profile_display_name_trigger()
+RETURNS trigger AS $$
+BEGIN
+    IF NEW.display_name IS NOT NULL AND NOT validate_display_name(NEW.display_name) THEN
+        RAISE EXCEPTION 'Invalid display name: must be 1-50 characters without HTML tags';
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS validate_profile_display_name ON public.profiles;
+CREATE TRIGGER validate_profile_display_name
+    BEFORE INSERT OR UPDATE ON public.profiles
+    FOR EACH ROW
+    EXECUTE FUNCTION validate_profile_display_name_trigger();
