@@ -27,13 +27,18 @@ export default function TransactionDetail({ hash, onClose, network = 'mainnet' }
 
     useEffect(() => {
         loadTransaction();
-    }, [hash]);
+    }, [hash, network]);
 
     const loadTransaction = async () => {
         setLoading(true);
         setError('');
 
         try {
+            // Validate hash before fetching
+            if (!hash || hash.length < 10) {
+                throw new Error('Invalid transaction hash');
+            }
+
             const [txData, opsData] = await Promise.all([
                 fetchTransactionByHash(hash, network),
                 fetchTransactionOperations(hash, network),
@@ -42,7 +47,9 @@ export default function TransactionDetail({ hash, onClose, network = 'mainnet' }
             setTransaction(txData);
             setOperations(opsData);
         } catch (err: any) {
-            setError(err.message || 'Failed to load transaction');
+            console.error('Transaction fetch error:', err);
+            const errorMessage = err.message || 'Failed to load transaction';
+            setError(`${errorMessage}. Make sure you're on the correct network (${network}).`);
         } finally {
             setLoading(false);
         }
@@ -72,7 +79,23 @@ export default function TransactionDetail({ hash, onClose, network = 'mainnet' }
                     <div className="text-center">
                         <XCircle className="text-red-400 mx-auto mb-4" size={48} />
                         <h2 className="text-xl font-bold mb-2">Error</h2>
-                        <p className="text-gray-400 mb-6">{error}</p>
+                        <p className="text-gray-400 mb-4">{error}</p>
+                        {hash && (
+                            <div className="mb-6 text-left">
+                                <p className="text-xs text-gray-500 mb-2">Transaction Hash:</p>
+                                <p className="text-xs text-gray-400 font-mono break-all bg-white/5 p-2 rounded">
+                                    {hash}
+                                </p>
+                                <a
+                                    href={`https://stellar.expert/explorer/${network === 'mainnet' ? 'public' : 'testnet'}/tx/${hash}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-xs text-blue-400 hover:text-blue-300 mt-2 inline-flex items-center gap-1"
+                                >
+                                    View on Stellar Expert <ExternalLink size={12} />
+                                </a>
+                            </div>
+                        )}
                         <button
                             onClick={onClose}
                             className="px-6 py-2 bg-white text-black rounded-full font-medium hover:bg-gray-200 transition-colors"

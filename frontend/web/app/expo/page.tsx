@@ -2,12 +2,21 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Activity, RefreshCw, Database, AlertCircle } from 'lucide-react';
+import { Activity, RefreshCw, Database, AlertCircle, TrendingUp, Layers, Clock, Zap } from 'lucide-react';
 import ExpoSearchBar from './SearchBar';
 import TransactionTable from './TransactionTable';
 import TransactionDetail from './TransactionDetail';
 import WalletView from './WalletView';
 import { fetchRecentTransactions, ExpoTransaction, StellarNetwork } from '@/lib/horizonService';
+
+interface NetworkStats {
+    latestLedger: number;
+    ledgerTime: string;
+    transactionCount: number;
+    operationCount: number;
+    averageFee: string;
+    baseReserve: string;
+}
 
 export default function ExpoPage() {
     const [transactions, setTransactions] = useState<ExpoTransaction[]>([]);
@@ -17,9 +26,12 @@ export default function ExpoPage() {
     const [selectedTx, setSelectedTx] = useState<string | null>(null);
     const [selectedWallet, setSelectedWallet] = useState<string | null>(null);
     const [network, setNetwork] = useState<StellarNetwork>('mainnet');
+    const [networkStats, setNetworkStats] = useState<NetworkStats | null>(null);
+    const [statsLoading, setStatsLoading] = useState(true);
 
     useEffect(() => {
         loadTransactions();
+        loadNetworkStats();
     }, [network]);
 
     useEffect(() => {
@@ -27,10 +39,42 @@ export default function ExpoPage() {
 
         const interval = setInterval(() => {
             loadTransactions(true);
+            loadNetworkStats(true);
         }, 10000);
 
         return () => clearInterval(interval);
-    }, [autoRefresh]);
+    }, [autoRefresh, network]);
+
+    const loadNetworkStats = async (silent: boolean = false) => {
+        if (!silent) setStatsLoading(true);
+
+        try {
+            const horizonUrl = network === 'mainnet' 
+                ? 'https://horizon.stellar.org' 
+                : 'https://horizon-testnet.stellar.org';
+            
+            // Fetch latest ledger info from Horizon
+            const response = await fetch(`${horizonUrl}/ledgers?order=desc&limit=1`);
+            const data = await response.json();
+            
+            if (data._embedded?.records?.[0]) {
+                const ledger = data._embedded.records[0];
+                setNetworkStats({
+                    latestLedger: ledger.sequence,
+                    ledgerTime: ledger.closed_at,
+                    transactionCount: ledger.successful_transaction_count,
+                    operationCount: ledger.operation_count,
+                    averageFee: (ledger.fee_pool / 10000000).toFixed(2),
+                    baseReserve: ledger.base_reserve_in_stroops ? 
+                        (ledger.base_reserve_in_stroops / 10000000).toFixed(1) : '0.5'
+                });
+            }
+        } catch (err: any) {
+            console.error('Failed to load network stats:', err);
+        } finally {
+            if (!silent) setStatsLoading(false);
+        }
+    };
 
     const loadTransactions = async (silent: boolean = false) => {
         if (!silent) setLoading(true);
@@ -38,6 +82,7 @@ export default function ExpoPage() {
 
         try {
             const data = await fetchRecentTransactions(20, network);
+            console.log('Loaded transactions:', data.length, 'First tx hash:', data[0]?.hash);
             setTransactions(data);
         } catch (err: any) {
             setError(err.message || 'Failed to load transactions');
@@ -59,6 +104,11 @@ export default function ExpoPage() {
     };
 
     const handleTransactionClick = (hash: string) => {
+        console.log('Transaction clicked:', hash, 'Network:', network);
+        if (!hash || hash.length < 10) {
+            setError('Invalid transaction hash');
+            return;
+        }
         setSelectedTx(hash);
     };
 
@@ -133,6 +183,89 @@ export default function ExpoPage() {
                     <ExpoSearchBar onSearch={handleSearch} />
                 </div>
 
+                {/* Network Statistics Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-12">
+                    <div className="bg-white/5 border border-white/10 rounded-xl p-6 hover:bg-white/10 transition-all">
+                        <div className="flex items-center gap-3 mb-3">
+                            <div className="w-10 h-10 bg-blue-500/20 rounded-lg flex items-center justify-center">
+                                <Layers className="text-blue-400" size={20} />
+                            </div>
+                            <span className="text-sm text-gray-400">Latest Ledger</span>
+                        </div>
+                        {statsLoading ? (
+                            <div className="h-8 bg-white/5 rounded animate-pulse" />
+                        ) : (
+                            <>
+                                <p className="text-2xl font-bold text-white">
+                                    {networkStats?.latestLedger.toLocaleString() || '0'}
+                                </p>
+                                <p className="text-xs text-gray-500 mt-1">
+                                    {networkStats?.ledgerTime ? new Date(networkStats.ledgerTime).toLocaleTimeString() : 'N/A'}
+                                </p>
+                            </>
+                        )}
+                    </div>
+
+                    <div className="bg-white/5 border border-white/10 rounded-xl p-6 hover:bg-white/10 transition-all">
+                        <div className="flex items-center gap-3 mb-3">
+                            <div className="w-10 h-10 bg-green-500/20 rounded-lg flex items-center justify-center">
+                                <TrendingUp className="text-green-400" size={20} />
+                            </div>
+                            <span className="text-sm text-gray-400">Transactions</span>
+                        </div>
+                        {statsLoading ? (
+                            <div className="h-8 bg-white/5 rounded animate-pulse" />
+                        ) : (
+                            <>
+                                <p className="text-2xl font-bold text-white">
+                                    {networkStats?.transactionCount.toLocaleString() || '0'}
+                                </p>
+                                <p className="text-xs text-gray-500 mt-1">Last ledger</p>
+                            </>
+                        )}
+                    </div>
+
+                    <div className="bg-white/5 border border-white/10 rounded-xl p-6 hover:bg-white/10 transition-all">
+                        <div className="flex items-center gap-3 mb-3">
+                            <div className="w-10 h-10 bg-purple-500/20 rounded-lg flex items-center justify-center">
+                                <Zap className="text-purple-400" size={20} />
+                            </div>
+                            <span className="text-sm text-gray-400">Operations</span>
+                        </div>
+                        {statsLoading ? (
+                            <div className="h-8 bg-white/5 rounded animate-pulse" />
+                        ) : (
+                            <>
+                                <p className="text-2xl font-bold text-white">
+                                    {networkStats?.operationCount.toLocaleString() || '0'}
+                                </p>
+                                <p className="text-xs text-gray-500 mt-1">Last ledger</p>
+                            </>
+                        )}
+                    </div>
+
+                    <div className="bg-white/5 border border-white/10 rounded-xl p-6 hover:bg-white/10 transition-all">
+                        <div className="flex items-center gap-3 mb-3">
+                            <div className="w-10 h-10 bg-orange-500/20 rounded-lg flex items-center justify-center">
+                                <Clock className="text-orange-400" size={20} />
+                            </div>
+                            <span className="text-sm text-gray-400">Base Reserve</span>
+                        </div>
+                        {statsLoading ? (
+                            <div className="h-8 bg-white/5 rounded animate-pulse" />
+                        ) : (
+                            <>
+                                <p className="text-2xl font-bold text-white">
+                                    {networkStats?.baseReserve || '0.5'} XLM
+                                </p>
+                                <p className="text-xs text-gray-500 mt-1">
+                                    Avg Fee: {networkStats?.averageFee || '0'} XLM
+                                </p>
+                            </>
+                        )}
+                    </div>
+                </div>
+
                 { }
                 <div className="flex items-center justify-between mb-6">
                     <div>
@@ -192,6 +325,15 @@ export default function ExpoPage() {
                             className="text-blue-400 hover:text-blue-300 transition-colors"
                         >
                             Stellar Horizon API
+                        </a>
+                        {' '}and{' '}
+                        <a
+                            href={`https://stellar.expert/explorer/${network === 'mainnet' ? 'public' : 'testnet'}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-400 hover:text-blue-300 transition-colors"
+                        >
+                            Stellar Expert
                         </a>
                     </p>
                     <p className="mt-2">

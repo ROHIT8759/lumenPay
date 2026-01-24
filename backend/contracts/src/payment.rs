@@ -7,7 +7,7 @@
 
 use soroban_sdk::{
     contract, contractimpl, contracttype, Env, Address, String, token, Symbol,
-    vec, Vec, symbol_short, Bytes,
+    Vec,
 };
 
 #[contract]
@@ -81,10 +81,8 @@ impl PaymentContract {
         
         for i in 0..recipients.len() {
             if let (Some(to), Some(amount)) = (recipients.get(i), amounts.get(i)) {
-                if let (Ok(to_addr), Ok(amt)) = (to, amount) {
-                    if amt > 0 {
-                        client.transfer(&from, &to_addr, &amt);
-                    }
+                if amount > 0 {
+                    client.transfer(&from, &to, &amount);
                 }
             }
         }

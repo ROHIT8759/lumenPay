@@ -33,7 +33,7 @@ export default function Navbar() {
     ];
 
 
-    if (pathname === '/') return null;
+    if (pathname === '/' || pathname === '/expo' || pathname === '/about') return null;
 
     return (
         <>

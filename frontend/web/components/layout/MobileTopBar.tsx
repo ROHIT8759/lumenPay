@@ -15,7 +15,7 @@ export default function MobileTopBar() {
     const { address, disconnect } = useWallet();
 
 
-    if (pathname === '/') return null;
+    if (pathname === '/' || pathname === '/expo' || pathname === '/about') return null;
 
     return (
         <>
