@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { usePathname } from 'next/navigation';
 import { useWallet } from '@/hooks/useWallet';
 import QRCodeModal from '@/components/ui/QRCodeModal';
+import Link from 'next/link';
 
 export default function MobileTopBar() {
     const pathname = usePathname();
@@ -13,18 +14,18 @@ export default function MobileTopBar() {
     const [isQROpen, setIsQROpen] = useState(false);
     const { address, disconnect } = useWallet();
 
-    
+
     if (pathname === '/') return null;
 
     return (
         <>
             <div className="fixed top-0 left-0 right-0 z-50 px-4 py-3 flex items-center justify-between md:hidden glass bg-black/50 backdrop-blur-md">
-                <div className="flex items-center gap-2">
+                <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity cursor-pointer">
                     <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center">
                         <span className="text-black font-bold text-xs">LP</span>
                     </div>
                     <span className="font-bold text-lg tracking-wider">LumenPay</span>
-                </div>
+                </Link>
 
                 <div className="flex items-center gap-4">
                     <button className="p-2 rounded-full hover:bg-white/10 transition-colors">
@@ -33,7 +34,7 @@ export default function MobileTopBar() {
                     <button
                         onClick={() => {
                             if (!address) {
-                                setIsQROpen(true); 
+                                setIsQROpen(true);
                             } else {
                                 setIsProfileOpen(true);
                             }
@@ -46,7 +47,7 @@ export default function MobileTopBar() {
                 </div>
             </div>
 
-            {}
+            { }
             <AnimatePresence>
                 {isProfileOpen && address && (
                     <>

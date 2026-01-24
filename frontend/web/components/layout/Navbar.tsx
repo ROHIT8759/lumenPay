@@ -38,12 +38,12 @@ export default function Navbar() {
     return (
         <>
             <nav className="hidden md:flex fixed top-0 inset-x-0 z-50 h-20 items-center justify-between px-8 bg-black/50 backdrop-blur-md border-b border-white/5">
-                <div className="flex items-center gap-3">
+                <Link href="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity cursor-pointer">
                     <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center">
                         <span className="text-black font-bold">LP</span>
                     </div>
                     <span className="font-bold text-xl tracking-wider">LumenPay</span>
-                </div>
+                </Link>
 
                 <div className="flex items-center gap-1">
                     {navItems.map((item) => {

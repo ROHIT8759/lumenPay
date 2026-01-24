@@ -9,14 +9,16 @@ import {
     formatTimestamp,
     formatAsset,
     shortenAddress,
+    StellarNetwork,
 } from '@/lib/horizonService';
 
 interface TransactionDetailProps {
     hash: string;
     onClose: () => void;
+    network?: StellarNetwork;
 }
 
-export default function TransactionDetail({ hash, onClose }: TransactionDetailProps) {
+export default function TransactionDetail({ hash, onClose, network = 'mainnet' }: TransactionDetailProps) {
     const [transaction, setTransaction] = useState<any>(null);
     const [operations, setOperations] = useState<ExpoOperation[]>([]);
     const [loading, setLoading] = useState(true);
@@ -33,8 +35,8 @@ export default function TransactionDetail({ hash, onClose }: TransactionDetailPr
 
         try {
             const [txData, opsData] = await Promise.all([
-                fetchTransactionByHash(hash),
-                fetchTransactionOperations(hash),
+                fetchTransactionByHash(hash, network),
+                fetchTransactionOperations(hash, network),
             ]);
 
             setTransaction(txData);
@@ -86,7 +88,7 @@ export default function TransactionDetail({ hash, onClose }: TransactionDetailPr
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto">
             <div className="bg-[#111] border border-white/10 rounded-2xl max-w-4xl w-full my-8">
-                {}
+                { }
                 <div className="flex items-center justify-between p-6 border-b border-white/10">
                     <div className="flex items-center gap-3">
                         {transaction.successful ? (
@@ -104,9 +106,9 @@ export default function TransactionDetail({ hash, onClose }: TransactionDetailPr
                     </button>
                 </div>
 
-                {}
+                { }
                 <div className="p-6 space-y-6">
-                    {}
+                    { }
                     <DetailRow
                         label="Transaction Hash"
                         value={transaction.hash}
@@ -115,7 +117,7 @@ export default function TransactionDetail({ hash, onClose }: TransactionDetailPr
                         copied={copied === 'hash'}
                     />
 
-                    {}
+                    { }
                     <DetailRow
                         label="Status"
                         value={
@@ -125,7 +127,7 @@ export default function TransactionDetail({ hash, onClose }: TransactionDetailPr
                         }
                     />
 
-                    {}
+                    { }
                     <DetailRow
                         label="Source Account"
                         value={transaction.source_account}
@@ -134,24 +136,24 @@ export default function TransactionDetail({ hash, onClose }: TransactionDetailPr
                         copied={copied === 'source'}
                     />
 
-                    {}
+                    { }
                     <DetailRow label="Ledger" value={transaction.ledger_attr?.toLocaleString()} />
 
-                    {}
+                    { }
                     <DetailRow
                         label="Fee Charged"
                         value={`${(parseInt(transaction.fee_charged) / 10000000).toFixed(7)} XLM`}
                     />
 
-                    {}
+                    { }
                     <DetailRow label="Time" value={formatTimestamp(transaction.created_at)} />
 
-                    {}
+                    { }
                     {transaction.memo && (
                         <DetailRow label="Memo" value={transaction.memo} copyable />
                     )}
 
-                    {}
+                    { }
                     <div>
                         <h3 className="text-sm font-medium text-gray-400 mb-3">
                             Operations ({operations.length})
@@ -194,7 +196,7 @@ export default function TransactionDetail({ hash, onClose }: TransactionDetailPr
                         </div>
                     </div>
 
-                    {}
+                    { }
                     <a
                         href={`https://stellar.expert/explorer/public/tx/${transaction.hash}`}
                         target="_blank"

@@ -9,6 +9,7 @@ import {
     ExpoTransaction,
     formatTimestamp,
     shortenAddress,
+    StellarNetwork,
 } from '@/lib/horizonService';
 import { useWallet } from '@/hooks/useWallet';
 
@@ -16,9 +17,10 @@ interface WalletViewProps {
     address: string;
     onClose: () => void;
     onTransactionClick: (hash: string) => void;
+    network?: StellarNetwork;
 }
 
-export default function WalletView({ address, onClose, onTransactionClick }: WalletViewProps) {
+export default function WalletView({ address, onClose, onTransactionClick, network = 'mainnet' }: WalletViewProps) {
     const { address: userAddress } = useWallet();
     const [account, setAccount] = useState<ExpoAccount | null>(null);
     const [transactions, setTransactions] = useState<ExpoTransaction[]>([]);
@@ -38,8 +40,8 @@ export default function WalletView({ address, onClose, onTransactionClick }: Wal
 
         try {
             const [accountData, txData] = await Promise.all([
-                fetchAccountByAddress(address),
-                fetchAccountTransactions(address, 10),
+                fetchAccountByAddress(address, network),
+                fetchAccountTransactions(address, 10, network),
             ]);
 
             setAccount(accountData);
@@ -91,7 +93,7 @@ export default function WalletView({ address, onClose, onTransactionClick }: Wal
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto">
             <div className="bg-[#111] border border-white/10 rounded-2xl max-w-4xl w-full my-8">
-                {}
+                { }
                 <div className="flex items-center justify-between p-6 border-b border-white/10">
                     <div className="flex items-center gap-3">
                         <WalletIcon className="text-blue-400" size={24} />
@@ -110,9 +112,9 @@ export default function WalletView({ address, onClose, onTransactionClick }: Wal
                     </button>
                 </div>
 
-                {}
+                { }
                 <div className="p-6 space-y-6">
-                    {}
+                    { }
                     <div>
                         <span className="text-sm font-medium text-gray-400 block mb-2">Wallet Address</span>
                         <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-lg p-3">
@@ -130,7 +132,7 @@ export default function WalletView({ address, onClose, onTransactionClick }: Wal
                         </div>
                     </div>
 
-                    {}
+                    { }
                     <div>
                         <h3 className="text-sm font-medium text-gray-400 mb-3">Balances</h3>
                         <div className="space-y-2">
@@ -160,7 +162,7 @@ export default function WalletView({ address, onClose, onTransactionClick }: Wal
                         </div>
                     </div>
 
-                    {}
+                    { }
                     <div className="grid grid-cols-2 gap-4">
                         <div className="bg-white/5 border border-white/10 rounded-lg p-4">
                             <span className="text-sm text-gray-400 block mb-1">Sequence</span>
@@ -172,7 +174,7 @@ export default function WalletView({ address, onClose, onTransactionClick }: Wal
                         </div>
                     </div>
 
-                    {}
+                    { }
                     <div>
                         <h3 className="text-sm font-medium text-gray-400 mb-3">
                             Recent Transactions ({transactions.length})
@@ -214,7 +216,7 @@ export default function WalletView({ address, onClose, onTransactionClick }: Wal
                         </div>
                     </div>
 
-                    {}
+                    { }
                     <a
                         href={`https://stellar.expert/explorer/public/account/${address}`}
                         target="_blank"

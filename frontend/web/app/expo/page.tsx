@@ -110,27 +110,21 @@ export default function ExpoPage() {
                             <span>Public Stellar Network Data</span>
                         </div>
 
-                        {/* Network Selector */}
-                        <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-full p-1">
-                            <button
-                                onClick={() => setNetwork('mainnet')}
-                                className={`px-4 py-1.5 rounded-full text-xs font-medium transition-all ${network === 'mainnet'
-                                        ? 'bg-blue-500 text-white'
-                                        : 'text-gray-400 hover:text-white'
-                                    }`}
-                            >
-                                Mainnet
-                            </button>
-                            <button
-                                onClick={() => setNetwork('testnet')}
-                                className={`px-4 py-1.5 rounded-full text-xs font-medium transition-all ${network === 'testnet'
-                                        ? 'bg-orange-500 text-white'
-                                        : 'text-gray-400 hover:text-white'
-                                    }`}
-                            >
-                                Testnet
-                            </button>
-                        </div>
+                        {/* Network Toggle Button */}
+                        <button
+                            onClick={() => setNetwork(network === 'mainnet' ? 'testnet' : 'mainnet')}
+                            className="flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 rounded-full hover:bg-white/10 transition-all group"
+                        >
+                            <span className={`text-xs font-medium ${network === 'mainnet' ? 'text-blue-400' : 'text-orange-400'}`}>
+                                {network === 'mainnet' ? 'Mainnet' : 'Testnet'}
+                            </span>
+                            <div className="w-10 h-5 bg-black/40 rounded-full relative">
+                                <div className={`absolute top-0.5 w-4 h-4 rounded-full transition-all ${network === 'mainnet'
+                                        ? 'left-0.5 bg-blue-500'
+                                        : 'left-5 bg-orange-500'
+                                    }`} />
+                            </div>
+                        </button>
                     </div>
                 </div>
 
@@ -208,7 +202,7 @@ export default function ExpoPage() {
 
             { }
             {selectedTx && (
-                <TransactionDetail hash={selectedTx} onClose={() => setSelectedTx(null)} />
+                <TransactionDetail hash={selectedTx} onClose={() => setSelectedTx(null)} network={network} />
             )}
 
             {selectedWallet && (
@@ -216,6 +210,7 @@ export default function ExpoPage() {
                     address={selectedWallet}
                     onClose={() => setSelectedWallet(null)}
                     onTransactionClick={handleTransactionClick}
+                    network={network}
                 />
             )}
         </div>

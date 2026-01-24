@@ -88,8 +88,9 @@ export async function fetchRecentTransactions(limit: number = 20, network: Stell
 }
 
 
-export async function fetchTransactionByHash(hash: string): Promise<any> {
+export async function fetchTransactionByHash(hash: string, network: StellarNetwork = 'mainnet'): Promise<any> {
   try {
+    const server = getServer(network);
     const transaction = await server.transactions().transaction(hash).call();
     return transaction;
   } catch (error: any) {
@@ -102,8 +103,9 @@ export async function fetchTransactionByHash(hash: string): Promise<any> {
 }
 
 
-export async function fetchTransactionOperations(hash: string): Promise<ExpoOperation[]> {
+export async function fetchTransactionOperations(hash: string, network: StellarNetwork = 'mainnet'): Promise<ExpoOperation[]> {
   try {
+    const server = getServer(network);
     const response = await server
       .operations()
       .forTransaction(hash)
@@ -128,8 +130,9 @@ export async function fetchTransactionOperations(hash: string): Promise<ExpoOper
 }
 
 
-export async function fetchAccountByAddress(address: string): Promise<ExpoAccount> {
+export async function fetchAccountByAddress(address: string, network: StellarNetwork = 'mainnet'): Promise<ExpoAccount> {
   try {
+    const server = getServer(network);
     const account = await server.accounts().accountId(address).call();
 
     return {
@@ -160,9 +163,11 @@ export async function fetchAccountByAddress(address: string): Promise<ExpoAccoun
 
 export async function fetchAccountTransactions(
   address: string,
-  limit: number = 20
+  limit: number = 20,
+  network: StellarNetwork = 'mainnet'
 ): Promise<ExpoTransaction[]> {
   try {
+    const server = getServer(network);
     const response = await server
       .transactions()
       .forAccount(address)
