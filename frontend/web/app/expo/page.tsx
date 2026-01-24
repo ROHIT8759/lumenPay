@@ -49,14 +49,14 @@ export default function ExpoPage() {
         if (!silent) setStatsLoading(true);
 
         try {
-            const horizonUrl = network === 'mainnet' 
-                ? 'https://horizon.stellar.org' 
+            const horizonUrl = network === 'mainnet'
+                ? 'https://horizon.stellar.org'
                 : 'https://horizon-testnet.stellar.org';
-            
+
             // Fetch latest ledger info from Horizon
             const response = await fetch(`${horizonUrl}/ledgers?order=desc&limit=1`);
             const data = await response.json();
-            
+
             if (data._embedded?.records?.[0]) {
                 const ledger = data._embedded.records[0];
                 setNetworkStats({
@@ -65,7 +65,7 @@ export default function ExpoPage() {
                     transactionCount: ledger.successful_transaction_count,
                     operationCount: ledger.operation_count,
                     averageFee: (ledger.fee_pool / 10000000).toFixed(2),
-                    baseReserve: ledger.base_reserve_in_stroops ? 
+                    baseReserve: ledger.base_reserve_in_stroops ?
                         (ledger.base_reserve_in_stroops / 10000000).toFixed(1) : '0.5'
                 });
             }
@@ -170,8 +170,8 @@ export default function ExpoPage() {
                             </span>
                             <div className="w-10 h-5 bg-black/40 rounded-full relative">
                                 <div className={`absolute top-0.5 w-4 h-4 rounded-full transition-all ${network === 'mainnet'
-                                        ? 'left-0.5 bg-blue-500'
-                                        : 'left-5 bg-orange-500'
+                                    ? 'left-0.5 bg-blue-500'
+                                    : 'left-5 bg-orange-500'
                                     }`} />
                             </div>
                         </button>
