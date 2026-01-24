@@ -2,9 +2,16 @@
 
 import { Horizon } from '@stellar/stellar-sdk';
 
+export type StellarNetwork = 'mainnet' | 'testnet';
 
-const HORIZON_URL = 'https://horizon.stellar.org';
-const server = new Horizon.Server(HORIZON_URL);
+const HORIZON_URLS = {
+  mainnet: 'https://horizon.stellar.org',
+  testnet: 'https://horizon-testnet.stellar.org'
+};
+
+function getServer(network: StellarNetwork = 'mainnet'): Horizon.Server {
+  return new Horizon.Server(HORIZON_URLS[network]);
+}
 
 export interface ExpoTransaction {
   id: string;
@@ -52,8 +59,9 @@ export interface ExpoAccount {
 }
 
 
-export async function fetchRecentTransactions(limit: number = 20): Promise<ExpoTransaction[]> {
+export async function fetchRecentTransactions(limit: number = 20, network: StellarNetwork = 'mainnet'): Promise<ExpoTransaction[]> {
   try {
+    const server = getServer(network);
     const response = await server
       .transactions()
       .order('desc')
