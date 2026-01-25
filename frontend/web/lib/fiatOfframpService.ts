@@ -4,6 +4,7 @@
  */
 
 import * as StellarSdk from '@stellar/stellar-sdk';
+import { rpc } from '@stellar/stellar-sdk';
 
 const NETWORK_PASSPHRASE = StellarSdk.Networks.TESTNET;
 const HORIZON_URL = 'https://horizon-testnet.stellar.org';
@@ -55,10 +56,10 @@ export interface ExchangeRateInfo {
 }
 
 class FiatOfframpService {
-  private server: StellarSdk.SorobanRpc.Server;
+  private server: rpc.Server;
 
   constructor() {
-    this.server = new StellarSdk.SorobanRpc.Server(SOROBAN_RPC_URL);
+    this.server = new rpc.Server(SOROBAN_RPC_URL);
   }
 
   /**

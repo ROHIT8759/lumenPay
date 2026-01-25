@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
         }
 
 
-        const result = await networkProvider.getBalances(address);
+        const result = await networkProvider.getAccountBalances(address);
 
         if (result.error) {
             return NextResponse.json(

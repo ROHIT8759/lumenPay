@@ -715,7 +715,7 @@ function PayIdModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void 
 
         try {
             // Get sender wallet address
-            const session = secureStorage.getSession();
+            const session = await secureStorage.getSession();
             let senderWallet = '';
             if (session?.publicKey) {
                 senderWallet = session.publicKey;
@@ -732,10 +732,11 @@ function PayIdModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void 
                 const walletData = await secureStorage.getWallet(session.publicKey);
                 if (walletData?.encryptedSecret) {
                     // Build and sign transaction to pool
-                    const txResult = await walletService.sendPayment({
+                    const txResult = await walletService.buildPaymentTransaction({
                         sourcePublicKey: senderWallet,
                         destinationPublicKey: poolAddress,
                         amount: amount,
+                        asset: 'native',
                         memo: `UPI:${upiId}`,
                     });
 
@@ -743,12 +744,25 @@ function PayIdModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void 
                         throw new Error(txResult.error);
                     }
 
+                    // Get passphrase from session storage
+                    const passphrase = sessionStorage.getItem('walletPassphrase');
+                    if (!passphrase) {
+                        throw new Error('Wallet not unlocked. Please unlock your wallet first.');
+                    }
+
                     // Sign the transaction
-                    const signedXdr = await signingEngine.signTransaction(
-                        txResult.xdr!,
-                        walletData.encryptedSecret,
-                        'testnet'
-                    );
+                    const signResult = await signingEngine.signTransaction({
+                        xdr: txResult.transaction.xdr,
+                        walletData,
+                        passphrase,
+                        network: 'testnet',
+                    });
+
+                    if (signResult.error) {
+                        throw new Error(signResult.error);
+                    }
+
+                    const signedXdr = signResult.signedTransaction.signedXDR;
 
                     // Submit to network
                     const submitResponse = await fetch('/api/wallet/tx/submit', {
@@ -824,7 +838,7 @@ function PayIdModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void 
 
         try {
             // Get sender wallet address
-            const session = secureStorage.getSession();
+            const session = await secureStorage.getSession();
             let senderWallet = '';
             if (session?.publicKey) {
                 senderWallet = session.publicKey;
@@ -839,12 +853,13 @@ function PayIdModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void 
             // Step 1: Send XLM to liquidity pool
             if (session?.publicKey) {
                 const walletData = await secureStorage.getWallet(session.publicKey);
-                if (walletData?.encryptedSecret) {
+                if (walletData) {
                     // Build and sign transaction to pool
-                    const txResult = await walletService.sendPayment({
+                    const txResult = await walletService.buildPaymentTransaction({
                         sourcePublicKey: senderWallet,
                         destinationPublicKey: poolAddress,
                         amount: amount,
+                        asset: 'native',
                         memo: `BANK:${accountNumber.slice(-4)}`,
                     });
 
@@ -852,12 +867,25 @@ function PayIdModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void 
                         throw new Error(txResult.error);
                     }
 
+                    // Get passphrase from session storage
+                    const passphrase = sessionStorage.getItem('walletPassphrase');
+                    if (!passphrase) {
+                        throw new Error('Wallet not unlocked. Please unlock your wallet first.');
+                    }
+
                     // Sign the transaction
-                    const signedXdr = await signingEngine.signTransaction(
-                        txResult.xdr!,
-                        walletData.encryptedSecret,
-                        'testnet'
-                    );
+                    const signResult = await signingEngine.signTransaction({
+                        xdr: txResult.transaction.xdr,
+                        walletData,
+                        passphrase,
+                        network: 'testnet',
+                    });
+
+                    if (signResult.error) {
+                        throw new Error(signResult.error);
+                    }
+
+                    const signedXdr = signResult.signedTransaction.signedXDR;
 
                     // Submit to network
                     const submitResponse = await fetch('/api/wallet/tx/submit', {

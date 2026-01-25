@@ -14,7 +14,7 @@ import {
 import { WalletData, getKeypairFromWallet } from '@/lib/lumenVault/keyManager';
 
 interface WalletContextType {
-    
+
     isInitialized: boolean;
     hasWallet: boolean;
     isUnlocked: boolean;
@@ -23,7 +23,7 @@ interface WalletContextType {
     network: 'testnet' | 'public';
     balances: any;
 
-    
+
     refreshState: () => Promise<void>;
     lockWallet: () => Promise<void>;
     unlockWithPassphrase: (passphrase: string) => Promise<{ success: boolean; error?: string }>;
@@ -31,7 +31,7 @@ interface WalletContextType {
     signInWithWallet: (passphrase: string) => Promise<{ success: boolean; error?: string }>;
     signOut: () => void;
 
-    
+
     biometricsAvailable: boolean;
     biometricsEnabled: boolean;
     enableBiometrics: () => Promise<{ success: boolean; error?: string }>;
@@ -62,27 +62,27 @@ export function WalletProvider({ children }: WalletProviderProps) {
     const [network, setNetwork] = useState<'testnet' | 'public'>('testnet');
     const [balances, setBalances] = useState<any>({ native: '0', usdc: '0', assets: [] });
 
-    
+
     const [biometricsAvailable, setBiometricsAvailable] = useState(false);
     const [biometricsEnabled, setBiometricsEnabled] = useState(false);
 
-    
+
     useEffect(() => {
         initWallet();
     }, []);
 
     const initWallet = async () => {
         try {
-            
+
             const ids = await secureStorage.getAllWalletIds();
             setHasWallet(ids.length > 0);
 
-            
+
             const settings = await secureStorage.getSettings();
             setNetwork(settings.network);
             networkProvider.switchNetwork(settings.network);
 
-            
+
             const unlocked = await secureStorage.isUnlocked();
             setIsUnlocked(unlocked);
 
@@ -94,7 +94,7 @@ export function WalletProvider({ children }: WalletProviderProps) {
                 }
             }
 
-            
+
             const bioAvail = await biometricAuth.isAvailable();
             setBiometricsAvailable(bioAvail.available);
 
@@ -110,7 +110,7 @@ export function WalletProvider({ children }: WalletProviderProps) {
 
     const fetchBalances = async (pubKey: string) => {
         try {
-            const result = await networkProvider.getBalances(pubKey);
+            const result = await networkProvider.getAccountBalances(pubKey);
             setBalances(result.balances || { native: '0', usdc: '0', assets: [] });
         } catch (error) {
             console.error('Failed to fetch balances:', error);
@@ -133,11 +133,11 @@ export function WalletProvider({ children }: WalletProviderProps) {
             if (!hasWallet) return { success: false, error: 'No wallet found' };
 
             const ids = await secureStorage.getAllWalletIds();
-            const walletId = ids[0]; 
+            const walletId = ids[0];
 
             if (!walletId) return { success: false, error: 'No wallet ID found' };
 
-            
+
             const walletData = await secureStorage.getWallet(walletId);
             if (!walletData) return { success: false, error: 'Wallet data not found' };
 
@@ -151,7 +151,7 @@ export function WalletProvider({ children }: WalletProviderProps) {
                 return { success: false, error: 'Invalid passphrase' };
             }
 
-            
+
             await secureStorage.storeSession(walletData.publicKey);
 
             setIsUnlocked(true);
@@ -168,11 +168,11 @@ export function WalletProvider({ children }: WalletProviderProps) {
         setNetwork(newNetwork);
         networkProvider.switchNetwork(newNetwork);
 
-        
+
         const settings = await secureStorage.getSettings();
         await secureStorage.storeSettings({ ...settings, network: newNetwork });
 
-        
+
         if (publicKey) {
             fetchBalances(publicKey);
         }
@@ -212,7 +212,7 @@ export function WalletProvider({ children }: WalletProviderProps) {
             return authResult;
         }
 
-        
+
         const ids = await secureStorage.getAllWalletIds();
         const walletId = ids[0];
         if (!walletId) return { success: false, error: 'No wallet found' };
@@ -220,7 +220,7 @@ export function WalletProvider({ children }: WalletProviderProps) {
         const walletData = await secureStorage.getWallet(walletId);
         if (!walletData) return { success: false, error: 'Wallet data missing' };
 
-        
+
         await secureStorage.storeSession(walletData.publicKey);
 
         setIsUnlocked(true);

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabaseClient';
+import { supabase, isSupabaseConfigured } from '@/lib/supabaseClient';
+import { MOCK_RWA_ASSETS } from '@/lib/mockData';
 
 export interface RWAAsset {
   id: string;

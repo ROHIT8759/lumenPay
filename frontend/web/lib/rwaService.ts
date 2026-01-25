@@ -275,7 +275,7 @@ class RWAService {
       const result = await server.sendTransaction(prepared);
       const status = await waitForTransaction(result.hash);
 
-      if (status.status === 'SUCCESS' && 'returnValue' in status) {
+      if (status.status === 'SUCCESS' && 'returnValue' in status && status.returnValue) {
         const assetId = scValToNative(status.returnValue);
         
         // Store in database
@@ -637,7 +637,7 @@ class RWAService {
       const result = await server.sendTransaction(prepared);
       const status = await waitForTransaction(result.hash);
 
-      if (status.status === 'SUCCESS' && 'returnValue' in status) {
+      if (status.status === 'SUCCESS' && 'returnValue' in status && status.returnValue) {
         const claimedAmount = scValToNative(status.returnValue);
 
         // Update database

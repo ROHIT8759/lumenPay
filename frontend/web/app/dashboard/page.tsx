@@ -60,6 +60,14 @@ export default function Home() {
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
   const [people, setPeople] = useState<Person[]>([]);
   const [peopleLoading, setPeopleLoading] = useState(true);
+  const [balances, setBalances] = useState<Balance[]>([]);
+  const [totalUsdBalance, setTotalUsdBalance] = useState(0);
+  const [balanceLoading, setBalanceLoading] = useState(true);
+  const [balance, setBalance] = useState<any>(null);
+
+  // Wallet state from LumenVault
+  const [walletState] = useLumenVault();
+  const { publicKey, isLocked } = walletState;
 
   useEffect(() => {
     fetchData();

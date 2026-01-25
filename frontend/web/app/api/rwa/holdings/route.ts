@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabaseClient';
+import { supabase, isSupabaseConfigured } from '@/lib/supabaseClient';
+import { MOCK_USER_HOLDINGS } from '@/lib/mockData';
 
 export interface RWAHolding {
   id: string;

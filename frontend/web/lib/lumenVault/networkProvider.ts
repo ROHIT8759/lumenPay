@@ -114,6 +114,17 @@ class NetworkProviderService {
     }
 
 
+    async submitSorobanTransaction(signedXDR: string): Promise<{
+        hash: string;
+        ledger?: number;
+        error?: string;
+    }> {
+        // For Soroban transactions, delegate to regular submit
+        // In production, this would use the Soroban RPC server
+        return this.submitTransaction(signedXDR);
+    }
+
+
     async getBalances(publicKey: string): Promise<{
         balances: BalanceInfo;
         error?: string;
@@ -334,8 +345,8 @@ export const networkProvider = {
     getSorobanServer: () => networkProvider.instance.getSorobanServer(),
     submitTransaction: (signedXDR: string) => networkProvider.instance.submitTransaction(signedXDR),
     submitSorobanTransaction: (signedXDR: string) => networkProvider.instance.submitSorobanTransaction(signedXDR),
-    getAccount: (publicKey: string) => networkProvider.instance.getAccount(publicKey),
-    getAccountBalances: (publicKey: string) => networkProvider.instance.getAccountBalances(publicKey),
+    getAccount: (publicKey: string) => networkProvider.instance.getAccountInfo(publicKey),
+    getAccountBalances: (publicKey: string) => networkProvider.instance.getBalances(publicKey),
     getTransactionHistory: (publicKey: string, limit?: number) => networkProvider.instance.getTransactionHistory(publicKey, limit),
     getAccountInfo: (publicKey: string) => networkProvider.instance.getAccountInfo(publicKey),
     accountExists: (publicKey: string) => networkProvider.instance.accountExists(publicKey),
