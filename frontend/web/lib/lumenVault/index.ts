@@ -8,5 +8,6 @@ export { permissionManager } from './permissionManager';
 export { biometricAuth } from './biometricAuth';
 export { walletAuth } from './walletAuth';
 export { mobileStorage } from './mobileStorage';
+export { walletManager } from './walletManager';
 export * from './mnemonicSupport';
 export * from './qrSync';

@@ -7,33 +7,33 @@
 
 
 export const NETWORK = {
-  
+
   CURRENT: (process.env.STELLAR_NETWORK || 'testnet') as 'testnet' | 'public',
 
-  
+
   HORIZON_TESTNET: 'https://horizon-testnet.stellar.org',
   HORIZON_PUBLIC: 'https://horizon.stellar.org',
 
-  
+
   PASSPHRASE_TESTNET: 'Test SDF Network ; September 2015',
   PASSPHRASE_PUBLIC: 'Public Global Stellar Network ; September 2015',
 
-  
+
   FRIENDBOT_URL: 'https://friendbot.stellar.org',
 };
 
 
 export const ASSETS = {
-  
+
   NATIVE: { code: 'XLM', issuer: null },
 
-  
+
   USDC_TESTNET: {
     code: 'USDC',
     issuer: process.env.STELLAR_USDC_ISSUER || 'GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5',
   },
 
-  
+
   USDC_MAINNET: {
     code: 'USDC',
     issuer: 'GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN',
@@ -42,7 +42,7 @@ export const ASSETS = {
 
 
 export const API = {
-  
+
   BASE_URL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001',
 
   // Auth endpoints
@@ -118,28 +118,28 @@ export const API = {
 
 
 export const FEATURES = {
-  
+
   STOCKS_ENABLED: process.env.ENABLE_STOCK_TRADING !== 'false',
 
-  
+
   LOANS_ENABLED: process.env.ENABLE_LOANS !== 'false',
 
-  
+
   KYC_DEMO_MODE: process.env.KYC_DEMO_MODE === 'true',
 };
 
 
 export const BRAND = {
-  
+
   NAME: 'LumenPay',
 
-  
+
   WALLET_NAME: 'LumenVault',
 
-  
+
   TAGLINE: 'Your Keys, Your Coins',
 
-  
+
   COLORS: {
     PRIMARY: '#0A0A0F',
     ACCENT: '#00E5FF',
@@ -150,13 +150,13 @@ export const BRAND = {
 
 
 export const KYC = {
-  
+
   DIDIT: {
     APP_ID: process.env.DIDIT_APP_ID || '',
     API_URL: process.env.DIDIT_API_URL || 'https://apx.didit.me/v1',
   },
 
-  
+
   LEVELS: {
     0: { name: 'Unverified', features: ['payments'] },
     1: { name: 'Biometric Verified', features: ['payments', 'stocks'] },
@@ -166,14 +166,14 @@ export const KYC = {
 
 
 export const LIMITS = {
-  
+
   PER_TX: {
     0: 100,
     1: 10000,
     2: 100000,
   },
 
-  
+
   DAILY: {
     0: 1000,
     1: 50000,
@@ -200,13 +200,40 @@ export function getUSDCAsset() {
     : ASSETS.USDC_MAINNET;
 }
 
-// Soroban configuration
+// Soroban configuration - All deployed contract addresses
 export const SOROBAN = {
   // RPC endpoints
   RPC_TESTNET: 'https://soroban-testnet.stellar.org',
   RPC_MAINNET: 'https://soroban.stellar.org',
-  
-  // Stock Trading Contract - Update this after deployment
+
+  // Deployed Contracts (Testnet) - 2026-01-25
+  CONTRACTS: {
+    // Escrow Contract - Collateral escrow for loans
+    ESCROW: process.env.NEXT_PUBLIC_ESCROW_CONTRACT_ID || '',
+
+    // RWA Contract - Real World Asset tokenization
+    RWA: process.env.NEXT_PUBLIC_RWA_CONTRACT_ID || '',
+
+    // Credit Contract - Credit scoring
+    CREDIT: process.env.NEXT_PUBLIC_CREDIT_CONTRACT_ID || '',
+
+    // KYC Contract - KYC verification on-chain
+    KYC: process.env.NEXT_PUBLIC_KYC_CONTRACT_ID || '',
+
+    // Loan Contract - DeFi loan management
+    LOAN: process.env.NEXT_PUBLIC_LOAN_CONTRACT_ID || '',
+
+    // Payment Contract - Payment processing
+    PAYMENT: process.env.NEXT_PUBLIC_PAYMENT_CONTRACT_ID || '',
+
+    // Fiat Offramp Contract - UPI/Bank off-ramp
+    FIAT_OFFRAMP: process.env.NEXT_PUBLIC_FIAT_OFFRAMP_CONTRACT_ID || '',
+
+    // Stock Trading Contract - Stock trading
+    STOCK_TRADING: process.env.NEXT_PUBLIC_STOCK_TRADING_CONTRACT_ID || '',
+  },
+
+  // Legacy alias for backwards compatibility
   STOCK_TRADING_CONTRACT: process.env.NEXT_PUBLIC_STOCK_TRADING_CONTRACT_ID || '',
 };
 

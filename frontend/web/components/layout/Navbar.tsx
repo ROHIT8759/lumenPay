@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { Home, Users, Briefcase, Gift, FileText, User, Settings, HelpCircle, LogOut, QrCode, Languages, Copy, Check, UserCircle } from 'lucide-react';
-import { useWallet } from '@/hooks/useWallet';
+import { useWallet } from '@/components/lumenVault/WalletProvider';
 import { motion, AnimatePresence } from 'framer-motion';
 import QRCodeModal from '@/components/ui/QRCodeModal';
 import Link from 'next/link';
@@ -11,14 +11,14 @@ import { usePathname, useRouter } from 'next/navigation';
 export default function Navbar() {
     const pathname = usePathname();
     const router = useRouter();
-    const { address, disconnect } = useWallet();
+    const { publicKey, signOut } = useWallet();
     const [isProfileOpen, setIsProfileOpen] = useState(false);
     const [isQROpen, setIsQROpen] = useState(false);
     const [copied, setCopied] = useState(false);
 
     const copyAddress = async () => {
-        if (address) {
-            await navigator.clipboard.writeText(address);
+        if (publicKey) {
+            await navigator.clipboard.writeText(publicKey);
             setCopied(true);
             setTimeout(() => setCopied(false), 2000);
         }
@@ -68,7 +68,7 @@ export default function Navbar() {
                 <div className="relative">
                     <button
                         onClick={() => {
-                            if (!address) {
+                            if (!publicKey) {
                                 router.push('/wallet/sync');
                             } else {
                                 setIsProfileOpen(!isProfileOpen);
@@ -79,7 +79,7 @@ export default function Navbar() {
                         <div className="text-right hidden lg:block">
                             <div className="text-sm font-medium">My Wallet</div>
                             <div className="text-xs text-gray-500 font-mono">
-                                {address ? `${address.slice(0, 4)}...${address.slice(-4)}` : 'Connect'}
+                                {publicKey ? `${publicKey.slice(0, 4)}...${publicKey.slice(-4)}` : 'Connect'}
                             </div>
                         </div>
                         <div className="w-10 h-10 bg-blue-500 rounded-full border-2 border-black flex items-center justify-center">
@@ -89,7 +89,7 @@ export default function Navbar() {
 
                     { }
                     <AnimatePresence>
-                        {isProfileOpen && address && (
+                        {isProfileOpen && publicKey && (
                             <>
                                 <div className="fixed inset-0 z-40" onClick={() => setIsProfileOpen(false)} />
                                 <motion.div
@@ -101,7 +101,7 @@ export default function Navbar() {
                                     <div className="p-4 border-b border-white/5 mb-2">
                                         <p className="text-sm font-bold text-white">My Account</p>
                                         <div className="flex items-center gap-2 mt-1">
-                                            <p className="text-xs text-gray-500 truncate font-mono flex-1">{address}</p>
+                                            <p className="text-xs text-gray-500 truncate font-mono flex-1">{publicKey}</p>
                                             <button
                                                 onClick={copyAddress}
                                                 className="p-1.5 rounded-lg hover:bg-white/10 text-gray-400 hover:text-white transition-colors"
@@ -144,7 +144,7 @@ export default function Navbar() {
                                         </button>
                                         <div className="h-px bg-white/5 my-2" />
                                         <button
-                                            onClick={disconnect}
+                                            onClick={signOut}
                                             className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-red-500/10 text-sm text-red-400 hover:text-red-300 transition"
                                         >
                                             <LogOut size={18} />
@@ -161,7 +161,7 @@ export default function Navbar() {
             <QRCodeModal
                 isOpen={isQROpen}
                 onClose={() => setIsQROpen(false)}
-                walletAddress={address || ''}
+                walletAddress={publicKey || ''}
             />
         </>
     );

@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { Search, User, X, QrCode, Copy, Settings, HelpCircle, LogOut, Languages, Home, Users, FileText, Briefcase, Wallet } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { usePathname, useRouter } from 'next/navigation';
-import { useWallet } from '@/hooks/useWallet';
+import { useWallet } from '@/components/lumenVault/WalletProvider';
 import QRCodeModal from '@/components/ui/QRCodeModal';
 import Link from 'next/link';
 
@@ -13,7 +13,7 @@ export default function MobileTopBar() {
     const router = useRouter();
     const [isProfileOpen, setIsProfileOpen] = useState(false);
     const [isQROpen, setIsQROpen] = useState(false);
-    const { address, disconnect } = useWallet();
+    const { publicKey, signOut } = useWallet();
 
     // Navigation items for bottom bar
     const navItems = [
@@ -42,7 +42,7 @@ export default function MobileTopBar() {
                     </button>
                     <button
                         onClick={() => {
-                            if (!address) {
+                            if (!publicKey) {
                                 router.push('/wallet/sync');
                             } else {
                                 setIsProfileOpen(true);
@@ -51,7 +51,7 @@ export default function MobileTopBar() {
                         className="p-2.5 rounded-full hover:bg-white/10 transition-colors relative"
                     >
                         <User size={20} />
-                        {address && <div className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-black"></div>}
+                        {publicKey && <div className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-black"></div>}
                     </button>
                 </div>
             </div>
@@ -84,7 +84,7 @@ export default function MobileTopBar() {
 
             {/* Profile Drawer */}
             <AnimatePresence>
-                {isProfileOpen && address && (
+                {isProfileOpen && publicKey && (
                     <>
                         <motion.div
                             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
@@ -107,16 +107,12 @@ export default function MobileTopBar() {
                             </div>
 
                             <div className="flex flex-col items-center mb-8">
-<<<<<<< HEAD
                                 <div className="w-20 h-20 bg-gradient-to-tr from-blue-500 to-purple-500 rounded-full mb-4 flex items-center justify-center ring-4 ring-white/10">
-=======
-                                <div className="w-20 h-20 bg-blue-500 rounded-full mb-4 flex items-center justify-center">
->>>>>>> d2313b8740f23fdd69892335510d2561b485772c
                                     <User size={40} className="text-white" />
                                 </div>
                                 <h3 className="text-lg font-semibold">My Wallet</h3>
                                 <div className="flex items-center gap-2 text-sm text-gray-400 mt-2 bg-white/5 px-4 py-2 rounded-full cursor-pointer hover:bg-white/10 transition active:scale-95">
-                                    <span className="font-mono text-xs">{address ? `${address.slice(0, 6)}...${address.slice(-6)}` : 'Not Connected'}</span>
+                                    <span className="font-mono text-xs">{publicKey ? `${publicKey.slice(0, 6)}...${publicKey.slice(-6)}` : 'Not Connected'}</span>
                                     <Copy size={14} />
                                 </div>
                             </div>
@@ -148,7 +144,7 @@ export default function MobileTopBar() {
                             <div className="mt-auto pt-6 border-t border-white/10">
                                 <button
                                     onClick={() => {
-                                        disconnect();
+                                        signOut();
                                         setIsProfileOpen(false);
                                     }}
                                     className="flex items-center justify-center gap-3 w-full p-4 rounded-xl bg-red-500/10 text-red-400 hover:bg-red-500/20 hover:text-red-300 transition active:scale-95"
@@ -165,7 +161,7 @@ export default function MobileTopBar() {
             <QRCodeModal
                 isOpen={isQROpen}
                 onClose={() => setIsQROpen(false)}
-                walletAddress={address || ''}
+                walletAddress={publicKey || ''}
             />
         </>
     );
