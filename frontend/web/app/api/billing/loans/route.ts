@@ -47,6 +47,23 @@ export async function GET(request: NextRequest) {
     const userId = searchParams.get('userId');
     const status = searchParams.get('status');
 
+    
+    if (!isSupabaseConfigured()) {
+      console.log('[DEMO MODE] Using mock loans data');
+      return NextResponse.json({
+        success: true,
+        loans: MOCK_LOANS,
+        summary: {
+          total_borrowed: 0,
+          total_outstanding: 0,
+          total_collateral_locked: 0,
+          average_health_factor: 0,
+          num_active_loans: 0,
+        },
+        demo: true,
+      });
+    }
+
     if (!userId) {
       return NextResponse.json({ error: 'User ID required' }, { status: 400 });
     }
@@ -72,7 +89,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to fetch loans' }, { status: 500 });
     }
 
-    
+
     const activeLoans = (data || []).filter(l => l.status === 'active');
     const totalBorrowed = activeLoans.reduce((sum, l) => sum + l.principal_amount, 0);
     const totalOutstanding = activeLoans.reduce((sum, l) => sum + l.amount_outstanding, 0);
@@ -84,7 +101,7 @@ export async function GET(request: NextRequest) {
       return sum + collateralSum;
     }, 0);
 
-    const healthFactor = totalOutstanding > 0 
+    const healthFactor = totalOutstanding > 0
       ? (totalCollateralValue / totalOutstanding)
       : 999;
 
@@ -97,7 +114,7 @@ export async function GET(request: NextRequest) {
         total_outstanding: totalOutstanding,
         total_collateral: totalCollateralValue,
         health_factor: healthFactor.toFixed(2),
-        is_healthy: healthFactor > 1.25, 
+        is_healthy: healthFactor > 1.25,
       }
     });
   } catch (err) {
@@ -110,14 +127,14 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { 
-      userId, 
-      principalAmount, 
+    const {
+      userId,
+      principalAmount,
       tenureDays,
-      collateral 
+      collateral
     } = body;
 
-    
+
     if (!userId || !principalAmount || !tenureDays) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
@@ -130,18 +147,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Minimum loan amount is $10' }, { status: 400 });
     }
 
-    
+
     let totalCollateralValue = 0;
     for (const c of collateral) {
       const price = ASSET_PRICES[c.assetCode] || 1;
       totalCollateralValue += c.amount * price;
     }
 
-    
+
     const ltvRatio = (principalAmount / totalCollateralValue) * 100;
     if (ltvRatio > 70) {
       const requiredCollateral = principalAmount / 0.7;
-      return NextResponse.json({ 
+      return NextResponse.json({
         error: 'Insufficient collateral. Maximum LTV is 70%',
         details: {
           required_collateral_value: requiredCollateral.toFixed(2),
@@ -152,7 +169,7 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    
+
     if (principalAmount > 10000) {
       const { data: kycData } = await supabase
         .from('kyc_status')
@@ -161,7 +178,7 @@ export async function POST(request: NextRequest) {
         .single();
 
       if (!kycData?.is_verified || (kycData.verification_level || 0) < 2) {
-        return NextResponse.json({ 
+        return NextResponse.json({
           error: 'Full KYC required for loans above $10,000',
           kyc_required: true,
           required_level: 2
@@ -169,28 +186,28 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    
-    
-    let interestRateBps = 1000; 
+
+
+    let interestRateBps = 1000;
     if (ltvRatio > 40) {
       interestRateBps += Math.floor((ltvRatio - 40) / 10) * 200;
     }
-    
+
     interestRateBps = Math.min(interestRateBps, 2500);
 
-    
+
     const originationFee = principalAmount * 0.005;
     const loanAmount = principalAmount - originationFee;
 
-    
+
     const interestAmount = principalAmount * (interestRateBps / 10000) * (tenureDays / 365);
     const amountOutstanding = principalAmount + interestAmount;
 
-    
+
     const dueDate = new Date();
     dueDate.setDate(dueDate.getDate() + tenureDays);
 
-    
+
     const { data: loan, error: loanError } = await supabase
       .from('loans')
       .insert({
@@ -214,7 +231,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to create loan' }, { status: 500 });
     }
 
-    
+
     const collateralRecords = collateral.map((c: { assetCode: string; amount: number }) => ({
       loan_id: loan.id,
       user_id: userId,
@@ -230,12 +247,12 @@ export async function POST(request: NextRequest) {
 
     if (collateralError) {
       console.error('Failed to lock collateral:', collateralError);
-      
+
       await supabase.from('loans').delete().eq('id', loan.id);
       return NextResponse.json({ error: 'Failed to lock collateral' }, { status: 500 });
     }
 
-    
+
     await supabase
       .from('loans')
       .update({
@@ -244,7 +261,7 @@ export async function POST(request: NextRequest) {
       })
       .eq('id', loan.id);
 
-    
+
     const { data: wallet } = await supabase
       .from('wallets')
       .select('balance')

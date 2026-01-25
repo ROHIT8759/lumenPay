@@ -4,7 +4,7 @@ import { supabase } from '@/lib/supabaseClient';
 export interface KYCStatus {
   id: string;
   user_id: string;
-  verification_level: number; 
+  verification_level: number;
   is_verified: boolean;
   document_verified: boolean;
   address_verified: boolean;
@@ -25,18 +25,38 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'User ID required' }, { status: 400 });
     }
 
+    
+    if (!isSupabaseConfigured()) {
+      console.log('[DEMO MODE] Using mock KYC status');
+      const kycStatus = { ...MOCK_KYC_STATUS, user_id: userId };
+      
+      const benefits = {
+        max_transaction_limit: kycStatus.verification_level === 0 ? 500 : kycStatus.verification_level === 1 ? 5000 : null,
+        max_loan_limit: kycStatus.verification_level === 0 ? 0 : kycStatus.verification_level === 1 ? 10000 : null,
+        can_access_rwa: kycStatus.verification_level >= 1,
+        can_access_flash_loans: kycStatus.verification_level >= 2,
+      };
+
+      return NextResponse.json({
+        success: true,
+        kyc_status: kycStatus,
+        benefits,
+        demo: true,
+      });
+    }
+
     const { data, error } = await supabase
       .from('kyc_status')
       .select('*')
       .eq('user_id', userId)
       .single();
 
-    if (error && error.code !== 'PGRST116') { 
+    if (error && error.code !== 'PGRST116') {
       console.error('Error fetching KYC status:', error);
       return NextResponse.json({ error: 'Failed to fetch KYC status' }, { status: 500 });
     }
 
-    
+
     const kycStatus: KYCStatus = data || {
       id: '',
       user_id: userId,
@@ -51,7 +71,7 @@ export async function GET(request: NextRequest) {
       rejection_reason: null,
     };
 
-    
+
     const benefits = {
       level_0: {
         max_transaction: 500,
@@ -77,10 +97,10 @@ export async function GET(request: NextRequest) {
       success: true,
       kyc: kycStatus,
       benefits,
-      current_benefits: kycStatus.verification_level === 2 
-        ? benefits.level_2 
-        : kycStatus.verification_level === 1 
-          ? benefits.level_1 
+      current_benefits: kycStatus.verification_level === 2
+        ? benefits.level_2
+        : kycStatus.verification_level === 1
+          ? benefits.level_1
           : benefits.level_0,
     });
   } catch (err) {
@@ -93,17 +113,17 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { 
-      userId, 
-      level, 
-      
+    const {
+      userId,
+      level,
+
       fullName,
       dateOfBirth,
       nationality,
-      
-      documentType, 
+
+      documentType,
       documentNumber,
-      documentFrontImage, 
+      documentFrontImage,
       documentBackImage,
       selfieImage,
       addressLine1,
@@ -119,7 +139,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    
+
     if (level === 1) {
       if (!fullName || !dateOfBirth || !nationality) {
         return NextResponse.json({ error: 'Basic info required for Level 1 KYC' }, { status: 400 });
@@ -132,20 +152,20 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    
+
     const { data: existingKyc } = await supabase
       .from('kyc_status')
       .select('id, verification_level')
       .eq('user_id', userId)
       .single();
 
-    
+
     const verificationData = {
       fullName,
       dateOfBirth,
       nationality,
       documentType: level === 2 ? documentType : undefined,
-      documentNumber: level === 2 ? documentNumber?.slice(-4) : undefined, 
+      documentNumber: level === 2 ? documentNumber?.slice(-4) : undefined,
       timestamp: Date.now(),
     };
     const verificationHash = Buffer.from(JSON.stringify(verificationData)).toString('base64');
@@ -153,47 +173,47 @@ export async function POST(request: NextRequest) {
     const kycData = {
       user_id: userId,
       verification_level: level,
-      is_verified: true, 
+      is_verified: true,
       document_verified: level === 2,
       address_verified: level === 2,
       verification_hash: verificationHash,
       submitted_at: new Date().toISOString(),
-      verified_at: new Date().toISOString(), 
+      verified_at: new Date().toISOString(),
     };
 
     let result;
     if (existingKyc) {
-      
+
       const { data, error } = await supabase
         .from('kyc_status')
         .update(kycData)
         .eq('id', existingKyc.id)
         .select()
         .single();
-      
+
       if (error) throw error;
       result = data;
     } else {
-      
+
       const { data, error } = await supabase
         .from('kyc_status')
         .insert(kycData)
         .select()
         .single();
-      
+
       if (error) throw error;
       result = data;
     }
 
-    
+
     await supabase
       .from('profiles')
       .update({ kyc_status: level === 2 ? 'verified' : 'basic' })
       .eq('id', userId);
 
-    
-    
-    
+
+
+
 
     return NextResponse.json({
       success: true,

@@ -13,7 +13,7 @@ export interface RWAHolding {
   trustline_established: boolean;
   first_purchase_at: string;
   last_transaction_at: string;
-  
+
   asset?: {
     asset_code: string;
     name: string;
@@ -34,6 +34,25 @@ export async function GET(request: NextRequest) {
 
     if (!userId) {
       return NextResponse.json({ error: 'User ID required' }, { status: 400 });
+    }
+
+    
+    if (!isSupabaseConfigured()) {
+      console.log('[DEMO MODE] Using mock holdings data');
+      return NextResponse.json({
+        success: true,
+        holdings: MOCK_USER_HOLDINGS,
+        portfolio: {
+          total_invested: 0,
+          current_value: 0,
+          total_yield_earned: 0,
+          pending_yield: 0,
+          unrealized_gain: 0,
+          unrealized_gain_percent: 0,
+          num_holdings: 0,
+        },
+        demo: true,
+      });
     }
 
     const { data, error } = await supabase
@@ -59,7 +78,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to fetch holdings' }, { status: 500 });
     }
 
-    
+
     const holdingsWithValues = (data || []).map(holding => {
       const currentValue = holding.quantity * (holding.asset?.unit_price || holding.average_buy_price);
       const unrealizedGain = currentValue - holding.total_invested;
@@ -73,7 +92,7 @@ export async function GET(request: NextRequest) {
       };
     });
 
-    
+
     const totalInvested = holdingsWithValues.reduce((sum, h) => sum + h.total_invested, 0);
     const totalCurrentValue = holdingsWithValues.reduce((sum, h) => sum + h.current_value, 0);
     const totalYieldEarned = holdingsWithValues.reduce((sum, h) => sum + h.total_yield_earned, 0);
@@ -86,7 +105,7 @@ export async function GET(request: NextRequest) {
         total_invested: totalInvested,
         current_value: totalCurrentValue,
         total_gain: totalCurrentValue - totalInvested,
-        total_gain_percent: totalInvested > 0 
+        total_gain_percent: totalInvested > 0
           ? (((totalCurrentValue - totalInvested) / totalInvested) * 100).toFixed(2)
           : '0.00',
         total_yield_earned: totalYieldEarned,
