@@ -101,11 +101,11 @@ export default function FlashLoansPage() {
             {}
             <motion.div variants={item}>
                 <GlassCard className="relative overflow-hidden">
-                    <div className="absolute inset-0 bg-gradient-to-br from-amber-500/20 to-orange-500/10" />
+                    <div className="absolute inset-0 bg-amber-500/20" />
 
                     <div className="relative">
                         <div className="flex items-center gap-4 mb-4">
-                            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center">
+                            <div className="w-16 h-16 rounded-2xl bg-amber-500 flex items-center justify-center">
                                 <Zap className="w-8 h-8 text-white" />
                             </div>
                             <div>
@@ -138,7 +138,7 @@ export default function FlashLoansPage() {
                             whileHover={{ scale: 1.02 }}
                             whileTap={{ scale: 0.98 }}
                             onClick={() => setShowModal(true)}
-                            className="w-full py-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white font-semibold rounded-xl"
+                            className="w-full py-3 bg-amber-500 text-white font-semibold rounded-xl"
                         >
                             Execute Flash Loan
                         </motion.button>
@@ -175,7 +175,7 @@ export default function FlashLoansPage() {
 
             {}
             <motion.div variants={item}>
-                <GlassCard className="bg-gradient-to-br from-blue-500/10 to-cyan-500/10">
+                <GlassCard className="bg-blue-500/10">
                     <div className="flex gap-4">
                         <div className="w-12 h-12 rounded-xl bg-blue-500/20 flex items-center justify-center flex-shrink-0">
                             <Info className="w-6 h-6 text-blue-400" />
@@ -195,7 +195,7 @@ export default function FlashLoansPage() {
 
             {}
             <motion.div variants={item}>
-                <GlassCard className="bg-gradient-to-br from-red-500/10 to-orange-500/10">
+                <GlassCard className="bg-red-500/10">
                     <div className="flex gap-4">
                         <div className="w-12 h-12 rounded-xl bg-red-500/20 flex items-center justify-center flex-shrink-0">
                             <AlertCircle className="w-6 h-6 text-red-400" />
@@ -302,7 +302,7 @@ export default function FlashLoansPage() {
                                     whileTap={{ scale: 0.98 }}
                                     onClick={executeFlashLoan}
                                     disabled={executing || !amount || parseFloat(amount) <= 0}
-                                    className="w-full py-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white font-semibold rounded-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                                    className="w-full py-3 bg-amber-500 text-white font-semibold rounded-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                                 >
                                     {executing ? (
                                         <>

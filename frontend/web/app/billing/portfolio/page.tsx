@@ -81,12 +81,12 @@ const item = {
 };
 
 const ASSET_TYPE_CONFIG: Record<string, { icon: React.ReactNode; color: string }> = {
-    real_estate: { icon: <Building2 className="w-5 h-5" />, color: 'from-blue-500 to-cyan-500' },
-    bond: { icon: <Landmark className="w-5 h-5" />, color: 'from-emerald-500 to-green-500' },
-    commodity: { icon: <Coins className="w-5 h-5" />, color: 'from-amber-500 to-yellow-500' },
-    invoice: { icon: <FileCheck2 className="w-5 h-5" />, color: 'from-purple-500 to-pink-500' },
-    stable_yield: { icon: <TrendingUp className="w-5 h-5" />, color: 'from-teal-500 to-cyan-500' },
-    equity_token: { icon: <Sparkles className="w-5 h-5" />, color: 'from-rose-500 to-orange-500' },
+    real_estate: { icon: <Building2 className="w-5 h-5" />, color: 'blue-500' },
+    bond: { icon: <Landmark className="w-5 h-5" />, color: 'emerald-500' },
+    commodity: { icon: <Coins className="w-5 h-5" />, color: 'amber-500' },
+    invoice: { icon: <FileCheck2 className="w-5 h-5" />, color: 'purple-500' },
+    stable_yield: { icon: <TrendingUp className="w-5 h-5" />, color: 'teal-500' },
+    equity_token: { icon: <Sparkles className="w-5 h-5" />, color: 'rose-500' },
 };
 
 export default function PortfolioPage() {
@@ -173,8 +173,8 @@ export default function PortfolioPage() {
                 <motion.div variants={item}>
                     <GlassCard className="relative overflow-hidden">
                         <div className={`absolute inset-0 bg-gradient-to-br ${parseFloat(portfolio.total_gain_percent) >= 0
-                            ? 'from-green-500/10 to-emerald-500/5'
-                            : 'from-red-500/10 to-orange-500/5'
+                            ? 'green-500/10'
+                            : 'red-500/10'
                             }`} />
 
                         <div className="relative">
@@ -284,7 +284,7 @@ export default function PortfolioPage() {
                 <button
                     onClick={() => setActiveTab('holdings')}
                     className={`flex-1 py-3 rounded-xl font-medium transition-all ${activeTab === 'holdings'
-                        ? 'bg-gradient-to-r from-cyan-500 to-blue-500 text-white'
+                        ? 'bg-cyan-500 text-white'
                         : 'bg-white/5 text-white/60 hover:bg-white/10'
                         }`}
                 >
@@ -293,7 +293,7 @@ export default function PortfolioPage() {
                 <button
                     onClick={() => setActiveTab('history')}
                     className={`flex-1 py-3 rounded-xl font-medium transition-all ${activeTab === 'history'
-                        ? 'bg-gradient-to-r from-cyan-500 to-blue-500 text-white'
+                        ? 'bg-cyan-500 text-white'
                         : 'bg-white/5 text-white/60 hover:bg-white/10'
                         }`}
                 >

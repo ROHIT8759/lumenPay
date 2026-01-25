@@ -2,8 +2,6 @@ import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import StarfieldBackground from "@/components/ui/StarfieldBackground";
-import Navbar from "@/components/layout/Navbar";
-import MobileTopBar from "@/components/layout/MobileTopBar";
 import Footer from "@/components/layout/Footer";
 
 const inter = Inter({ subsets: ["latin"] });
@@ -34,9 +32,13 @@ export default function RootLayout({
     <html lang="en">
       <body className={inter.className}>
         <StarfieldBackground />
+<<<<<<< HEAD
         <Navbar />
         <MobileTopBar />
         <main className="pt-16 md:pt-24 min-h-screen relative z-10 text-white pb-20 md:pb-10">
+=======
+        <main className="min-h-screen relative z-10 text-white pb-24 md:pb-10">
+>>>>>>> d2313b8740f23fdd69892335510d2561b485772c
           {children}
         </main>
         <Footer />

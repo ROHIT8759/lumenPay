@@ -82,7 +82,7 @@ export default function Navbar() {
                                 {address ? `${address.slice(0, 4)}...${address.slice(-4)}` : 'Connect'}
                             </div>
                         </div>
-                        <div className="w-10 h-10 bg-gradient-to-tr from-blue-500 to-purple-500 rounded-full border-2 border-black flex items-center justify-center">
+                        <div className="w-10 h-10 bg-blue-500 rounded-full border-2 border-black flex items-center justify-center">
                             <User className="text-white" size={20} />
                         </div>
                     </button>

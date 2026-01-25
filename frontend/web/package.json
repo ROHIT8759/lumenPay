@@ -12,6 +12,7 @@
 		"test:coverage": "jest --coverage"
 	},
 	"dependencies": {
+<<<<<<< HEAD
 		"@radix-ui/react-label": "^2.1.8",
 		"@radix-ui/react-progress": "^1.1.8",
 		"@radix-ui/react-select": "^2.2.6",
@@ -20,8 +21,10 @@
 		"@radix-ui/react-tabs": "^1.1.13",
 		"@react-three/drei": "^10.7.7",
 		"@react-three/fiber": "^9.5.0",
+=======
+		"@stellar/freighter-api": "^6.0.1",
+>>>>>>> d2313b8740f23fdd69892335510d2561b485772c
 		"@stellar/stellar-sdk": "^14.4.3",
-		"@supabase/auth-helpers-nextjs": "^0.15.0",
 		"@supabase/supabase-js": "^2.91.1",
 		"class-variance-authority": "^0.7.1",
 		"clsx": "^2.1.1",
@@ -33,12 +36,11 @@
 		"jsqr": "^1.4.0",
 		"lucide-react": "^0.563.0",
 		"next": "16.1.4",
-		"psql": "^0.0.1",
 		"qrcode.react": "^4.2.0",
 		"react": "^19.2.3",
 		"react-dom": "^19.2.3",
 		"tailwind-merge": "^3.4.0",
-		"three": "^0.182.0"
+		"tailwindcss-animate": "^1.0.7"
 	},
 	"devDependencies": {
 		"@tailwindcss/postcss": "^4.1.18",

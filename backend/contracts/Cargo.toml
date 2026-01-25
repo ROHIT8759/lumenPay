@@ -1,4 +1,4 @@
-[package]
+﻿[package]
 name = "steller_contracts"
 version = "0.1.0"
 edition = "2021"
@@ -7,10 +7,17 @@ edition = "2021"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
+<<<<<<< HEAD
 soroban-sdk = "22.0.0"
 
 [dev-dependencies]
 soroban-sdk = { version = "22.0.0", features = ["testutils"] }
+=======
+soroban-sdk = "22.0.1"
+
+[dev-dependencies]
+soroban-sdk = { version = "22.0.1", features = ["testutils"] }
+>>>>>>> d2313b8740f23fdd69892335510d2561b485772c
 
 [profile.release]
 opt-level = "z"

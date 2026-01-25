@@ -237,7 +237,7 @@ export default function MyAccountPage() {
                                     className="w-20 h-20 rounded-full object-cover border-2 border-white/10"
                                 />
                             ) : (
-                                <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-500/30 to-purple-500/30 flex items-center justify-center border-2 border-white/10">
+                                <div className="w-20 h-20 rounded-full bg-blue-500/30 flex items-center justify-center border-2 border-white/10">
                                     <span className="text-3xl font-bold text-blue-400">
                                         {profile.displayName.charAt(0).toUpperCase()}
                                     </span>
@@ -323,7 +323,7 @@ export default function MyAccountPage() {
                                     <button
                                         onClick={saveDisplayName}
                                         disabled={saving || !editName.trim()}
-                                        className="flex-1 py-3 bg-gradient-to-r from-blue-500 to-purple-500 hover:opacity-90 rounded-xl font-medium transition-opacity disabled:opacity-50 flex items-center justify-center gap-2"
+                                        className="flex-1 py-3 bg-blue-500 hover:opacity-90 rounded-xl font-medium transition-opacity disabled:opacity-50 flex items-center justify-center gap-2"
                                     >
                                         {saving ? (
                                             <Loader size={16} className="animate-spin" />

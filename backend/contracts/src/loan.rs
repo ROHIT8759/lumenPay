@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 
 
 
@@ -7,6 +8,10 @@
 
 use soroban_sdk::{
     contract, contractimpl, contracttype, Env, Address, token, Symbol,
+=======
+﻿use soroban_sdk::{
+    contract, contractimpl, contracttype, Env, Address, String, token, Symbol,
+>>>>>>> d2313b8740f23fdd69892335510d2561b485772c
 };
 
 #[contracttype]
@@ -16,7 +21,7 @@ pub struct LoanData {
     pub lender: Address,
     pub principal_amount: i128,
     pub amount_repaid: i128,
-    pub interest_rate_bps: u32, 
+    pub interest_rate_bps: u32,
     pub tenure_months: u32,
     pub start_time: u64,
     pub next_emi_due: u64,
@@ -42,7 +47,6 @@ pub struct LoanContract;
 
 #[contractimpl]
 impl LoanContract {
-    
     pub fn create_loan(
         env: Env,
         loan_id: u64,
@@ -67,7 +71,7 @@ impl LoanContract {
             interest_rate_bps,
             tenure_months,
             start_time: env.ledger().timestamp(),
-            next_emi_due: env.ledger().timestamp() + (30 * 24 * 60 * 60), 
+            next_emi_due: env.ledger().timestamp() + (30 * 24 * 60 * 60),
             is_active: true,
             is_defaulted: false,
         };
@@ -76,7 +80,6 @@ impl LoanContract {
             .persistent()
             .set(&(loan_id, Symbol::new(&env, "loan")), &loan);
 
-        
         let client = token::Client::new(&env, &token);
         client.transfer(&lender, &borrower, &principal);
 
@@ -88,7 +91,6 @@ impl LoanContract {
         true
     }
 
-    
     pub fn pay_emi(
         env: Env,
         loan_id: u64,
@@ -96,6 +98,7 @@ impl LoanContract {
         token: Address,
         amount: i128,
     ) -> bool {
+<<<<<<< HEAD
         
         let loan: Option<LoanData> = env
             .storage()
@@ -106,31 +109,32 @@ impl LoanContract {
             Some(l) => l,
             None => return false,
         };
+=======
+        let mut loan: LoanData = env
+            .storage()
+            .persistent()
+            .get(&(loan_id, Symbol::new(&env, "loan")))
+            .unwrap();
+>>>>>>> d2313b8740f23fdd69892335510d2561b485772c
 
-        if !loan.is_active {
+        loan.borrower.require_auth();
+
+        if !loan.is_active || loan.is_defaulted {
             return false;
         }
 
-        
-        loan.borrower.require_auth();
-
-        
         let client = token::Client::new(&env, &token);
         client.transfer(&loan.borrower, &loan.lender, &amount);
 
-        
-        let mut updated_loan = loan;
-        updated_loan.amount_repaid += amount;
-        updated_loan.next_emi_due = env.ledger().timestamp() + (30 * 24 * 60 * 60);
+        loan.amount_repaid += amount;
 
-        
-        if updated_loan.amount_repaid >= updated_loan.principal_amount {
-            updated_loan.is_active = false;
+        if loan.amount_repaid >= loan.principal_amount {
+            loan.is_active = false;
         }
 
         env.storage()
             .persistent()
-            .set(&(loan_id, Symbol::new(&env, "loan")), &updated_loan);
+            .set(&(loan_id, Symbol::new(&env, "loan")), &loan);
 
         env.events().publish(
             (Symbol::new(&env, "emi_paid"),),
@@ -140,6 +144,7 @@ impl LoanContract {
         true
     }
 
+<<<<<<< HEAD
     
     pub fn get_loan(env: Env, loan_id: u64) -> Option<LoanData> {
         env.storage()
@@ -158,6 +163,25 @@ impl LoanContract {
             Some(l) => l,
             None => return false,
         };
+=======
+    pub fn mark_as_defaulted(env: Env, loan_id: u64) -> bool {
+        let mut loan: LoanData = env
+            .storage()
+            .persistent()
+            .get(&(loan_id, Symbol::new(&env, "loan")))
+            .unwrap_or(LoanData {
+                borrower: Address::from_string(&String::from_str(&env, "")),
+                lender: Address::from_string(&String::from_str(&env, "")),
+                principal_amount: 0,
+                amount_repaid: 0,
+                interest_rate_bps: 0,
+                tenure_months: 0,
+                start_time: 0,
+                next_emi_due: 0,
+                is_active: false,
+                is_defaulted: false,
+            });
+>>>>>>> d2313b8740f23fdd69892335510d2561b485772c
 
         loan.lender.require_auth();
 
@@ -178,6 +202,13 @@ impl LoanContract {
 
         true
     }
+
+    pub fn get_loan(env: Env, loan_id: u64) -> LoanData {
+        env.storage()
+            .persistent()
+            .get(&(loan_id, Symbol::new(&env, "loan")))
+            .unwrap()
+    }
 }
 
 #[cfg(test)]
@@ -187,6 +218,16 @@ mod tests {
 
     #[test]
     fn test_create_loan() {
+        let env = Env::default();
+        let contract_id = env.register_contract(None, LoanContract);
+        let client = LoanContractClient::new(&env, &contract_id);
+
+        let borrower = Address::generate(&env);
+        let lender = Address::generate(&env);
         
+<<<<<<< HEAD
+=======
+        // Test would go here
+>>>>>>> d2313b8740f23fdd69892335510d2561b485772c
     }
 }

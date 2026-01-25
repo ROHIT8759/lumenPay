@@ -68,12 +68,12 @@ const item = {
 };
 
 const ASSET_TYPE_CONFIG: Record<string, { icon: React.ReactNode; label: string; color: string }> = {
-    real_estate: { icon: <Building2 className="w-5 h-5" />, label: 'Real Estate', color: 'from-blue-500 to-cyan-500' },
-    bond: { icon: <Landmark className="w-5 h-5" />, label: 'Bonds', color: 'from-emerald-500 to-green-500' },
-    commodity: { icon: <Coins className="w-5 h-5" />, label: 'Commodity', color: 'from-amber-500 to-yellow-500' },
-    invoice: { icon: <FileCheck2 className="w-5 h-5" />, label: 'Trade Finance', color: 'from-purple-500 to-pink-500' },
-    stable_yield: { icon: <TrendingUp className="w-5 h-5" />, label: 'Stable Yield', color: 'from-teal-500 to-cyan-500' },
-    equity_token: { icon: <Sparkles className="w-5 h-5" />, label: 'Equity', color: 'from-rose-500 to-orange-500' },
+    real_estate: { icon: <Building2 className="w-5 h-5" />, label: 'Real Estate', color: 'blue-500' },
+    bond: { icon: <Landmark className="w-5 h-5" />, label: 'Bonds', color: 'emerald-500' },
+    commodity: { icon: <Coins className="w-5 h-5" />, label: 'Commodity', color: 'amber-500' },
+    invoice: { icon: <FileCheck2 className="w-5 h-5" />, label: 'Trade Finance', color: 'purple-500' },
+    stable_yield: { icon: <TrendingUp className="w-5 h-5" />, label: 'Stable Yield', color: 'teal-500' },
+    equity_token: { icon: <Sparkles className="w-5 h-5" />, label: 'Equity', color: 'rose-500' },
 };
 
 const RISK_CONFIG: Record<string, { label: string; color: string }> = {
@@ -168,7 +168,7 @@ export default function BillingPage() {
                     <motion.button
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
-                        className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-500 text-white font-medium text-sm sm:text-base whitespace-nowrap"
+                        className="flex items-center gap-2 px-4 py-2 rounded-xl bg-cyan-500 text-white font-medium text-sm sm:text-base whitespace-nowrap"
                     >
                         <Wallet className="w-4 h-4 sm:w-5 sm:h-5" />
                         Portfolio
@@ -389,7 +389,7 @@ function TypeTab({
         <button
             onClick={onClick}
             className={`flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-full text-xs sm:text-sm font-medium whitespace-nowrap transition-all ${active
-                ? 'bg-gradient-to-r from-cyan-500 to-blue-500 text-white'
+                ? 'bg-cyan-500 text-white'
                 : 'bg-white/5 text-white/60 hover:bg-white/10'
                 }`}
         >

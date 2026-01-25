@@ -18,6 +18,7 @@ export default function AboutPage() {
                     <span className="font-bold text-xl tracking-wider">StellarPay</span>
                 </Link>
 
+<<<<<<< HEAD
                 <div className="flex items-center gap-6">
                     <Link href="/" className="text-sm font-medium hover:text-white text-gray-400 transition">
                         Home
@@ -29,6 +30,21 @@ export default function AboutPage() {
                         EXPO
                     </Link>
                 </div>
+=======
+                { }
+                <section className="text-center space-y-6">
+                    <motion.h1
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="text-4xl md:text-6xl font-bold text-white"
+                    >
+                        About LumenPay
+                    </motion.h1>
+                    <p className="text-xl text-gray-400 max-w-3xl mx-auto">
+                        We are bridging the gap between the complex world of Web3 and the simplicity of everyday payments.
+                    </p>
+                </section>
+>>>>>>> d2313b8740f23fdd69892335510d2561b485772c
 
                 <Link
                     href="/dashboard"

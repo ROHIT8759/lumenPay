@@ -1,6 +1,9 @@
 
 
 import { supabase } from './supabaseClient';
+import { contractService } from './contractService';
+import { createCustodialSigner, getCustodialWalletPublicKey } from './custodialWalletSigner';
+import { Networks } from '@stellar/stellar-sdk';
 
 interface KYCStatus {
   userId: string;
@@ -152,6 +155,23 @@ class KYCService {
         };
       }
 
+      // Get user's wallet address for on-chain verification
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('wallet_address')
+        .eq('id', userId)
+        .single();
+
+      // Record verification on-chain if contract is available
+      if (status.isVerified && profile?.wallet_address && contractService.isContractConfigured('KYC')) {
+        try {
+          const verificationLevel = 2; // Level 2 = fully verified
+          await this.recordKYCOnChain(profile.wallet_address, verificationLevel);
+        } catch (error) {
+          console.warn('On-chain KYC recording failed, continuing with DB only:', error);
+        }
+      }
+
       
       const { error } = await supabase
         .from('kyc_status')
@@ -191,6 +211,40 @@ class KYCService {
         success: false,
         error: error.message
       };
+    }
+  }
+
+  /**
+   * Record KYC verification on-chain using KYC Contract
+   */
+  private async recordKYCOnChain(walletAddress: string, level: number): Promise<void> {
+    try {
+      // Use admin wallet for KYC verification
+      const adminUserId = process.env.ADMIN_USER_ID || 'admin';
+      const adminPublicKey = await getCustodialWalletPublicKey(adminUserId);
+      
+      if (!adminPublicKey) {
+        throw new Error('Admin custodial wallet not found');
+      }
+
+      // Create custodial signer for admin
+      const signTransaction = createCustodialSigner(adminUserId, Networks.TESTNET);
+
+      const result = await contractService.verifyKYC(
+        walletAddress,
+        level,
+        adminPublicKey,
+        signTransaction
+      );
+
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to record KYC on-chain');
+      }
+
+      console.log('KYC recorded on-chain:', result.transactionHash);
+    } catch (error: any) {
+      console.error('Record KYC on-chain error:', error);
+      throw error;
     }
   }
 

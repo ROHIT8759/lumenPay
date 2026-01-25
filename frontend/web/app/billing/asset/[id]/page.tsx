@@ -56,12 +56,12 @@ interface PageProps {
 }
 
 const ASSET_TYPE_CONFIG: Record<string, { icon: React.ReactNode; label: string; color: string }> = {
-    real_estate: { icon: <Building2 className="w-6 h-6" />, label: 'Real Estate', color: 'from-blue-500 to-cyan-500' },
-    bond: { icon: <Landmark className="w-6 h-6" />, label: 'Bonds', color: 'from-emerald-500 to-green-500' },
-    commodity: { icon: <Coins className="w-6 h-6" />, label: 'Commodity', color: 'from-amber-500 to-yellow-500' },
-    invoice: { icon: <FileCheck2 className="w-6 h-6" />, label: 'Trade Finance', color: 'from-purple-500 to-pink-500' },
-    stable_yield: { icon: <TrendingUp className="w-6 h-6" />, label: 'Stable Yield', color: 'from-teal-500 to-cyan-500' },
-    equity_token: { icon: <Sparkles className="w-6 h-6" />, label: 'Equity', color: 'from-rose-500 to-orange-500' },
+    real_estate: { icon: <Building2 className="w-6 h-6" />, label: 'Real Estate', color: 'blue-500' },
+    bond: { icon: <Landmark className="w-6 h-6" />, label: 'Bonds', color: 'emerald-500' },
+    commodity: { icon: <Coins className="w-6 h-6" />, label: 'Commodity', color: 'amber-500' },
+    invoice: { icon: <FileCheck2 className="w-6 h-6" />, label: 'Trade Finance', color: 'purple-500' },
+    stable_yield: { icon: <TrendingUp className="w-6 h-6" />, label: 'Stable Yield', color: 'teal-500' },
+    equity_token: { icon: <Sparkles className="w-6 h-6" />, label: 'Equity', color: 'rose-500' },
 };
 
 const RISK_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
@@ -408,7 +408,7 @@ export default function AssetDetailPage({ params }: PageProps) {
                                 <motion.button
                                     whileHover={{ scale: 1.02 }}
                                     whileTap={{ scale: 0.98 }}
-                                    className="px-6 py-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white font-semibold rounded-xl"
+                                    className="px-6 py-3 bg-amber-500 text-white font-semibold rounded-xl"
                                 >
                                     Complete KYC
                                 </motion.button>
@@ -444,7 +444,7 @@ export default function AssetDetailPage({ params }: PageProps) {
                                 whileTap={{ scale: 0.98 }}
                                 onClick={handleBuy}
                                 disabled={buying || !buyAmount || totalCost > walletBalance}
-                                className="px-8 py-3 bg-gradient-to-r from-cyan-500 to-blue-500 text-white font-semibold rounded-xl disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="px-8 py-3 bg-cyan-500 text-white font-semibold rounded-xl disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 {buying ? 'Processing...' : 'Buy'}
                             </motion.button>
