@@ -138,7 +138,7 @@ export default function Home() {
         {/* Empty State */}
         {!peopleLoading && people.length === 0 && (
           <GlassCard className="p-6 text-center">
-            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-gray-800 to-black border border-white/10 flex items-center justify-center mx-auto mb-3">
+            <div className="w-12 h-12 rounded-full bg-gray-800 border border-white/10 flex items-center justify-center mx-auto mb-3">
               <Users className="text-gray-600" size={20} />
             </div>
             <p className="text-gray-400 text-sm mb-1">No contacts yet</p>
@@ -163,7 +163,7 @@ export default function Home() {
                       className="w-14 h-14 rounded-full object-cover border border-white/10 group-hover:border-blue-500/50 transition-colors"
                     />
                   ) : (
-                    <div className="w-14 h-14 rounded-full bg-gradient-to-br from-blue-500/20 to-purple-500/20 border border-white/10 group-hover:border-blue-500/50 transition-colors flex items-center justify-center">
+                    <div className="w-14 h-14 rounded-full bg-blue-500/20 border border-white/10 group-hover:border-blue-500/50 transition-colors flex items-center justify-center">
                       <span className="text-sm font-bold text-blue-400">
                         {person.name.charAt(0).toUpperCase()}
                       </span>
@@ -279,7 +279,7 @@ export default function Home() {
 
       {/* 6. Balance Card */}
       <motion.section variants={item} className="pb-8">
-        <GlassCard className="bg-gradient-to-br from-blue-900/40 to-black border-blue-500/20">
+        <GlassCard className="bg-blue-900/40 border-blue-500/20">
           <div className="flex justify-between items-start mb-4">
             <div>
               <h2 className="text-sm text-gray-300 mb-1">Total Balance</h2>

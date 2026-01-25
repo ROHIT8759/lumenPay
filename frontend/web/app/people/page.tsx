@@ -122,7 +122,7 @@ function EditNameModal({
                             {person.avatarUrl ? (
                                 <img src={person.avatarUrl} alt="" className="w-10 h-10 rounded-full" />
                             ) : (
-                                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500/20 to-purple-500/20 flex items-center justify-center">
+                                <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center">
                                     <span className="text-sm font-bold text-blue-400">
                                         {(person.name || person.shortAddress).charAt(0).toUpperCase()}
                                     </span>
@@ -171,7 +171,7 @@ function EditNameModal({
                             <button
                                 type="submit"
                                 disabled={loading || !name.trim()}
-                                className="flex-1 py-3 bg-gradient-to-r from-blue-500 to-purple-500 hover:opacity-90 rounded-xl font-medium transition-opacity disabled:opacity-50 flex items-center justify-center gap-2"
+                                className="flex-1 py-3 bg-blue-500 hover:opacity-90 rounded-xl font-medium transition-opacity disabled:opacity-50 flex items-center justify-center gap-2"
                             >
                                 {loading && <Loader size={16} className="animate-spin" />}
                                 Save
@@ -395,7 +395,7 @@ export default function PeoplePage() {
             {}
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500/20 to-purple-500/20 flex items-center justify-center">
+                    <div className="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center">
                         <Users className="text-blue-400" size={20} />
                     </div>
                     <div>
@@ -449,7 +449,7 @@ export default function PeoplePage() {
                     animate={{ opacity: 1, y: 0 }}
                     className="flex flex-col items-center justify-center py-16"
                 >
-                    <div className="w-24 h-24 rounded-full bg-gradient-to-br from-gray-800 to-black border border-white/10 flex items-center justify-center mb-6">
+                    <div className="w-24 h-24 rounded-full bg-gray-800 border border-white/10 flex items-center justify-center mb-6">
                         <Users className="text-gray-600" size={40} />
                     </div>
                     <h3 className="text-lg font-semibold text-white mb-2">No contacts yet</h3>
@@ -458,7 +458,7 @@ export default function PeoplePage() {
                     </p>
                     <Link
                         href="/dashboard"
-                        className="px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-xl font-medium hover:opacity-90 transition-opacity"
+                        className="px-6 py-3 bg-blue-500 text-white rounded-xl font-medium hover:opacity-90 transition-opacity"
                     >
                         Make a Transaction
                     </Link>
@@ -504,7 +504,7 @@ export default function PeoplePage() {
                                                         className="w-12 h-12 rounded-full object-cover"
                                                     />
                                                 ) : (
-                                                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500/20 to-purple-500/20 flex items-center justify-center">
+                                                    <div className="w-12 h-12 rounded-full bg-blue-500/20 flex items-center justify-center">
                                                         <span className="text-lg font-bold text-blue-400">
                                                             {displayName.charAt(0).toUpperCase()}
                                                         </span>

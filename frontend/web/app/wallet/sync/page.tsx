@@ -133,7 +133,7 @@ export default function WalletSyncPage() {
     // Mode selection
     if (mode === 'select') {
         return (
-            <div className="min-h-screen bg-gradient-to-b from-gray-900 to-black flex items-center justify-center p-4">
+            <div className="min-h-screen bg-gray-900 flex items-center justify-center p-4">
                 <div className="max-w-md w-full">
                     <div className="bg-gray-800/50 backdrop-blur-xl rounded-3xl p-8 border border-gray-700/50">
                         <div className="text-center mb-8">
@@ -202,7 +202,7 @@ export default function WalletSyncPage() {
     // Export mode
     if (mode === 'export') {
         return (
-            <div className="min-h-screen bg-gradient-to-b from-gray-900 to-black flex items-center justify-center p-4">
+            <div className="min-h-screen bg-gray-900 flex items-center justify-center p-4">
                 <div className="max-w-md w-full">
                     <div className="bg-gray-800/50 backdrop-blur-xl rounded-3xl p-8 border border-gray-700/50">
                         <button
@@ -240,7 +240,7 @@ export default function WalletSyncPage() {
                                 <button
                                     onClick={handleGenerateQR}
                                     disabled={isGenerating}
-                                    className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-400 hover:to-pink-400 disabled:opacity-50 text-white font-bold py-4 px-6 rounded-xl transition-all"
+                                    className="w-full flex items-center justify-center gap-2 bg-purple-500 hover:from-purple-400 hover:to-pink-400 disabled:opacity-50 text-white font-bold py-4 px-6 rounded-xl transition-all"
                                 >
                                     {isGenerating ? (
                                         <Loader2 className="w-5 h-5 animate-spin" />
@@ -310,7 +310,7 @@ export default function WalletSyncPage() {
 
     // Import mode
     return (
-        <div className="min-h-screen bg-gradient-to-b from-gray-900 to-black flex items-center justify-center p-4">
+        <div className="min-h-screen bg-gray-900 flex items-center justify-center p-4">
             <div className="max-w-md w-full">
                 <div className="bg-gray-800/50 backdrop-blur-xl rounded-3xl p-8 border border-gray-700/50">
                     <button
@@ -334,7 +334,7 @@ export default function WalletSyncPage() {
                             <p className="text-gray-400 mb-6">Your wallet has been imported</p>
                             <a
                                 href="/dashboard"
-                                className="inline-flex items-center gap-2 bg-gradient-to-r from-cyan-500 to-blue-500 text-white font-bold py-3 px-6 rounded-xl"
+                                className="inline-flex items-center gap-2 bg-cyan-500 text-white font-bold py-3 px-6 rounded-xl"
                             >
                                 Go to Dashboard
                                 <ArrowRight className="w-5 h-5" />
@@ -386,7 +386,7 @@ export default function WalletSyncPage() {
                             <button
                                 onClick={handleImportFromQR}
                                 disabled={isImporting}
-                                className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 disabled:opacity-50 text-white font-bold py-4 px-6 rounded-xl transition-all"
+                                className="w-full flex items-center justify-center gap-2 bg-cyan-500 hover:from-cyan-400 hover:to-blue-400 disabled:opacity-50 text-white font-bold py-4 px-6 rounded-xl transition-all"
                             >
                                 {isImporting ? (
                                     <Loader2 className="w-5 h-5 animate-spin" />

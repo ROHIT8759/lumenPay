@@ -24,7 +24,7 @@ export default function DemoBanner() {
     if (!isDemoMode) return null;
 
     return (
-        <div className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-r from-amber-500/10 via-yellow-500/10 to-amber-500/10 backdrop-blur-sm border-b border-amber-500/20">
+        <div className="fixed top-0 left-0 right-0 z-50 bg-amber-500/10 backdrop-blur-sm border-b border-amber-500/20">
             <div className="max-w-7xl mx-auto px-4 py-2 flex items-center justify-center gap-3 text-sm">
                 <Database className="text-amber-400" size={16} />
                 <span className="text-amber-200/90">

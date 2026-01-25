@@ -148,7 +148,7 @@ export default function LoansPage() {
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                     onClick={() => setShowNewLoanModal(true)}
-                    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 text-white font-medium text-sm sm:text-base whitespace-nowrap w-full sm:w-auto justify-center"
+                    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-purple-500 text-white font-medium text-sm sm:text-base whitespace-nowrap w-full sm:w-auto justify-center"
                 >
                     <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
                     New Loan
@@ -201,7 +201,7 @@ export default function LoansPage() {
                         key={f}
                         onClick={() => setFilter(f)}
                         className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${filter === f
-                            ? 'bg-gradient-to-r from-cyan-500 to-blue-500 text-white'
+                            ? 'bg-cyan-500 text-white'
                             : 'bg-white/5 text-white/60 hover:bg-white/10'
                             }`}
                     >
@@ -240,7 +240,7 @@ export default function LoansPage() {
 
             {}
             <motion.div variants={item}>
-                <GlassCard className="bg-gradient-to-br from-purple-500/10 to-pink-500/10">
+                <GlassCard className="bg-purple-500/10">
                     <div className="flex gap-4">
                         <div className="w-12 h-12 rounded-xl bg-purple-500/20 flex items-center justify-center flex-shrink-0">
                             <Info className="w-6 h-6 text-purple-400" />
@@ -414,7 +414,7 @@ function LoanCard({ loan, onRepay }: { loan: Loan; onRepay: () => void }) {
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                     onClick={onRepay}
-                    className="w-full py-2.5 bg-gradient-to-r from-green-500 to-emerald-500 text-white font-medium rounded-xl"
+                    className="w-full py-2.5 bg-green-500 text-white font-medium rounded-xl"
                 >
                     Repay Loan
                 </motion.button>
@@ -517,7 +517,7 @@ function NewLoanModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: 
                                     key={asset}
                                     onClick={() => setCollateralAsset(asset)}
                                     className={`flex-1 py-3 rounded-xl font-medium transition-all ${collateralAsset === asset
-                                        ? 'bg-gradient-to-r from-cyan-500 to-blue-500 text-white'
+                                        ? 'bg-cyan-500 text-white'
                                         : 'bg-white/5 text-white/60 hover:bg-white/10'
                                         }`}
                                 >
@@ -619,7 +619,7 @@ function NewLoanModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: 
                         whileTap={{ scale: 0.98 }}
                         onClick={handleSubmit}
                         disabled={loading || !borrowAmount || currentLTV > 70}
-                        className="w-full py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white font-semibold rounded-xl disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="w-full py-3 bg-purple-500 text-white font-semibold rounded-xl disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         {loading ? 'Processing...' : 'Create Loan'}
                     </motion.button>
@@ -735,7 +735,7 @@ function RepayModal({ loan, onClose, onSuccess }: { loan: Loan; onClose: () => v
                         whileTap={{ scale: 0.98 }}
                         onClick={handleRepay}
                         disabled={loading || !amount}
-                        className="w-full py-3 bg-gradient-to-r from-green-500 to-emerald-500 text-white font-semibold rounded-xl disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="w-full py-3 bg-green-500 text-white font-semibold rounded-xl disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         {loading ? 'Processing...' : `Repay $${amount || '0.00'}`}
                     </motion.button>

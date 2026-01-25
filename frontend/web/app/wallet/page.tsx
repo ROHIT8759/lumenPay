@@ -75,7 +75,7 @@ export default function WalletConnectPage() {
     
     if (state.isAuthenticated && state.publicKey) {
         return (
-            <div className="min-h-screen bg-gradient-to-b from-gray-900 to-black flex items-center justify-center p-4">
+            <div className="min-h-screen bg-gray-900 flex items-center justify-center p-4">
                 <div className="max-w-md w-full">
                     <div className="bg-gray-800/50 backdrop-blur-xl rounded-3xl p-8 border border-gray-700/50">
                         {}
@@ -99,7 +99,7 @@ export default function WalletConnectPage() {
                         <div className="space-y-3">
                             <a
                                 href="/dashboard"
-                                className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-white font-bold py-4 px-6 rounded-xl transition-all"
+                                className="w-full flex items-center justify-center gap-2 bg-cyan-500 hover:from-cyan-400 hover:to-blue-400 text-white font-bold py-4 px-6 rounded-xl transition-all"
                             >
                                 Go to Dashboard
                                 <ArrowRight className="w-5 h-5" />
@@ -121,7 +121,7 @@ export default function WalletConnectPage() {
     
     if (state.publicKey && state.isLocked && !state.isAuthenticated) {
         return (
-            <div className="min-h-screen bg-gradient-to-b from-gray-900 to-black flex items-center justify-center p-4">
+            <div className="min-h-screen bg-gray-900 flex items-center justify-center p-4">
                 <div className="max-w-md w-full">
                     <div className="bg-gray-800/50 backdrop-blur-xl rounded-3xl p-8 border border-gray-700/50">
                         {}
@@ -173,7 +173,7 @@ export default function WalletConnectPage() {
                             <button
                                 onClick={handleUnlock}
                                 disabled={state.isAuthenticating}
-                                className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 disabled:opacity-50 text-white font-bold py-4 px-6 rounded-xl transition-all"
+                                className="w-full flex items-center justify-center gap-2 bg-cyan-500 hover:from-cyan-400 hover:to-blue-400 disabled:opacity-50 text-white font-bold py-4 px-6 rounded-xl transition-all"
                             >
                                 {state.isAuthenticating ? (
                                     <Loader2 className="w-5 h-5 animate-spin" />
@@ -203,12 +203,12 @@ export default function WalletConnectPage() {
     
     if (mode === 'select') {
         return (
-            <div className="min-h-screen bg-gradient-to-b from-gray-900 to-black flex items-center justify-center p-4">
+            <div className="min-h-screen bg-gray-900 flex items-center justify-center p-4">
                 <div className="max-w-md w-full">
                     <div className="bg-gray-800/50 backdrop-blur-xl rounded-3xl p-8 border border-gray-700/50">
                         {}
                         <div className="text-center mb-8">
-                            <div className="w-20 h-20 bg-gradient-to-br from-cyan-500/20 to-blue-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <div className="w-20 h-20 bg-cyan-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
                                 <Wallet className="w-10 h-10 text-cyan-500" />
                             </div>
                             <h1 className="text-2xl font-bold text-white mb-2">LumenVault</h1>
@@ -265,7 +265,7 @@ export default function WalletConnectPage() {
     
     if (mode === 'create') {
         return (
-            <div className="min-h-screen bg-gradient-to-b from-gray-900 to-black flex items-center justify-center p-4">
+            <div className="min-h-screen bg-gray-900 flex items-center justify-center p-4">
                 <div className="max-w-md w-full">
                     <div className="bg-gray-800/50 backdrop-blur-xl rounded-3xl p-8 border border-gray-700/50">
                         <button
@@ -322,7 +322,7 @@ export default function WalletConnectPage() {
                             <button
                                 onClick={handleCreate}
                                 disabled={state.isCreating}
-                                className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 disabled:opacity-50 text-white font-bold py-4 px-6 rounded-xl transition-all"
+                                className="w-full flex items-center justify-center gap-2 bg-cyan-500 hover:from-cyan-400 hover:to-blue-400 disabled:opacity-50 text-white font-bold py-4 px-6 rounded-xl transition-all"
                             >
                                 {state.isCreating ? (
                                     <Loader2 className="w-5 h-5 animate-spin" />
@@ -348,7 +348,7 @@ export default function WalletConnectPage() {
 
     
     return (
-        <div className="min-h-screen bg-gradient-to-b from-gray-900 to-black flex items-center justify-center p-4">
+        <div className="min-h-screen bg-gray-900 flex items-center justify-center p-4">
             <div className="max-w-md w-full">
                 <div className="bg-gray-800/50 backdrop-blur-xl rounded-3xl p-8 border border-gray-700/50">
                     <button
@@ -405,7 +405,7 @@ export default function WalletConnectPage() {
                         <button
                             onClick={handleImport}
                             disabled={state.isCreating}
-                            className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 disabled:opacity-50 text-white font-bold py-4 px-6 rounded-xl transition-all"
+                            className="w-full flex items-center justify-center gap-2 bg-cyan-500 hover:from-cyan-400 hover:to-blue-400 disabled:opacity-50 text-white font-bold py-4 px-6 rounded-xl transition-all"
                         >
                             {state.isCreating ? (
                                 <Loader2 className="w-5 h-5 animate-spin" />

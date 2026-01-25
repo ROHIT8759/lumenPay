@@ -119,7 +119,7 @@ function EditNameModal({
                             {person.avatarUrl ? (
                                 <img src={person.avatarUrl} alt="" className="w-10 h-10 rounded-full" />
                             ) : (
-                                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500/20 to-purple-500/20 flex items-center justify-center">
+                                <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center">
                                     <span className="text-sm font-bold text-blue-400">
                                         {displayName.charAt(0).toUpperCase()}
                                     </span>
@@ -168,7 +168,7 @@ function EditNameModal({
                             <button
                                 type="submit"
                                 disabled={loading || !name.trim()}
-                                className="flex-1 py-3 bg-gradient-to-r from-blue-500 to-purple-500 hover:opacity-90 rounded-xl font-medium transition-opacity disabled:opacity-50 flex items-center justify-center gap-2"
+                                className="flex-1 py-3 bg-blue-500 hover:opacity-90 rounded-xl font-medium transition-opacity disabled:opacity-50 flex items-center justify-center gap-2"
                             >
                                 {loading && <Loader size={16} className="animate-spin" />}
                                 Save
@@ -334,7 +334,7 @@ function PayAgainModal({
                                     {person.avatarUrl ? (
                                         <img src={person.avatarUrl} alt="" className="w-10 h-10 rounded-full" />
                                     ) : (
-                                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500/20 to-purple-500/20 flex items-center justify-center">
+                                        <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center">
                                             <span className="text-sm font-bold text-blue-400">
                                                 {(person.name || person.shortAddress).charAt(0).toUpperCase()}
                                             </span>
@@ -401,7 +401,7 @@ function PayAgainModal({
                                 <button
                                     onClick={handleInitiate}
                                     disabled={loading || !amount || parseFloat(amount) <= 0}
-                                    className="flex-1 py-3 bg-gradient-to-r from-blue-500 to-purple-500 hover:opacity-90 rounded-xl font-medium transition-opacity disabled:opacity-50 flex items-center justify-center gap-2"
+                                    className="flex-1 py-3 bg-blue-500 hover:opacity-90 rounded-xl font-medium transition-opacity disabled:opacity-50 flex items-center justify-center gap-2"
                                 >
                                     {loading && <Loader size={16} className="animate-spin" />}
                                     Continue
@@ -783,7 +783,7 @@ export default function TransactionChatPage() {
                                 className="w-10 h-10 rounded-full object-cover"
                             />
                         ) : (
-                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500/20 to-purple-500/20 flex items-center justify-center">
+                            <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center">
                                 <span className="text-sm font-bold text-blue-400">
                                     {getDisplayName().charAt(0).toUpperCase()}
                                 </span>
@@ -872,7 +872,7 @@ export default function TransactionChatPage() {
                                     setPayAgainAmount(lastSuccessfulSentTx?.amount || 0);
                                     setShowPayAgain(true);
                                 }}
-                                className="px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-500 rounded-xl text-sm font-medium hover:opacity-90 transition-opacity flex items-center gap-2"
+                                className="px-4 py-2 bg-blue-500 rounded-xl text-sm font-medium hover:opacity-90 transition-opacity flex items-center gap-2"
                             >
                                 <Repeat size={14} />
                                 Pay Again
@@ -922,7 +922,7 @@ export default function TransactionChatPage() {
                 {}
                 {!loading && !error && transactions.length === 0 && (
                     <div className="flex flex-col items-center justify-center h-full gap-4">
-                        <div className="w-20 h-20 rounded-full bg-gradient-to-br from-gray-800 to-black border border-white/10 flex items-center justify-center">
+                        <div className="w-20 h-20 rounded-full bg-gray-800 border border-white/10 flex items-center justify-center">
                             <Send className="text-gray-600" size={32} />
                         </div>
                         <h3 className="text-lg font-semibold text-white">No transactions yet</h3>
@@ -931,7 +931,7 @@ export default function TransactionChatPage() {
                         </p>
                         <Link
                             href="/dashboard"
-                            className="px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-xl font-medium hover:opacity-90 transition-opacity"
+                            className="px-6 py-3 bg-blue-500 text-white rounded-xl font-medium hover:opacity-90 transition-opacity"
                         >
                             Send Money
                         </Link>
@@ -961,7 +961,7 @@ export default function TransactionChatPage() {
                                     >
                                         <div
                                             className={`max-w-[80%] rounded-2xl p-4 ${tx.direction === 'sent'
-                                                ? 'bg-gradient-to-br from-blue-500/20 to-purple-500/20 border border-blue-500/20 rounded-br-md'
+                                                ? 'bg-blue-500/20 border border-blue-500/20 rounded-br-md'
                                                 : 'bg-white/5 border border-white/10 rounded-bl-md'
                                                 }`}
                                         >
@@ -1057,7 +1057,7 @@ export default function TransactionChatPage() {
                                     setPayAgainAmount(lastSuccessfulSentTx?.amount || 0);
                                     setShowPayAgain(true);
                                 }}
-                                className="flex-1 py-3 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-xl font-medium hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
+                                className="flex-1 py-3 bg-blue-500 text-white rounded-xl font-medium hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
                             >
                                 <Repeat size={18} />
                                 Pay Again
@@ -1068,7 +1068,7 @@ export default function TransactionChatPage() {
                                     setPayAgainAmount(0);
                                     setShowPayAgain(true);
                                 }}
-                                className="flex-1 py-3 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-xl font-medium hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
+                                className="flex-1 py-3 bg-blue-500 text-white rounded-xl font-medium hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
                             >
                                 <Send size={18} />
                                 Send Money

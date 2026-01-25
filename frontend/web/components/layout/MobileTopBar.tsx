@@ -69,7 +69,7 @@ export default function MobileTopBar() {
                             </div>
 
                             <div className="flex flex-col items-center mb-8">
-                                <div className="w-20 h-20 bg-gradient-to-tr from-blue-500 to-purple-500 rounded-full mb-4 flex items-center justify-center">
+                                <div className="w-20 h-20 bg-blue-500 rounded-full mb-4 flex items-center justify-center">
                                     <User size={40} className="text-white" />
                                 </div>
                                 <h3 className="text-lg font-semibold">Rohit Kumar</h3>

@@ -58,7 +58,7 @@ export function WalletDashboard() {
                 </div>
 
                 {}
-                <div className="bg-gradient-to-br from-blue-600 to-purple-700 rounded-2xl p-6 text-white shadow-xl">
+                <div className="bg-blue-600 rounded-2xl p-6 text-white shadow-xl">
                     <p className="text-blue-100 text-sm font-medium">Total Balance</p>
                     <div className="flex items-baseline gap-1 mt-1">
                         <h1 className="text-4xl font-bold">{parseFloat(balances.native).toFixed(2)}</h1>

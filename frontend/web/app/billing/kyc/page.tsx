@@ -98,9 +98,9 @@ export default function KYCPage() {
     };
 
     const getStatusColor = () => {
-        if (!kycStatus || kycStatus.verification_level === 0) return 'from-amber-500 to-orange-500';
-        if (kycStatus.verification_level === 1) return 'from-cyan-500 to-blue-500';
-        return 'from-green-500 to-emerald-500';
+        if (!kycStatus || kycStatus.verification_level === 0) return 'amber-500';
+        if (kycStatus.verification_level === 1) return 'cyan-500';
+        return 'green-500';
     };
 
     return (
@@ -225,7 +225,7 @@ export default function KYCPage() {
 
             {}
             <motion.div variants={item}>
-                <GlassCard className="bg-gradient-to-br from-cyan-500/10 to-blue-500/10">
+                <GlassCard className="bg-cyan-500/10">
                     <div className="flex gap-4">
                         <div className="w-12 h-12 rounded-xl bg-cyan-500/20 flex items-center justify-center flex-shrink-0">
                             <AlertCircle className="w-6 h-6 text-cyan-400" />
@@ -412,7 +412,7 @@ function VerificationLevelCard({
                                     e.stopPropagation();
                                     onStart();
                                 }}
-                                className="w-full py-3 bg-gradient-to-r from-cyan-500 to-blue-500 text-white font-semibold rounded-xl"
+                                className="w-full py-3 bg-cyan-500 text-white font-semibold rounded-xl"
                             >
                                 Start Verification
                             </motion.button>
@@ -542,7 +542,7 @@ function KYCUpgradeModal({
                 {}
                 <div className="h-1 bg-white/10 rounded-full mb-6">
                     <div
-                        className="h-full bg-gradient-to-r from-cyan-500 to-blue-500 rounded-full transition-all"
+                        className="h-full bg-cyan-500 rounded-full transition-all"
                         style={{ width: `${(step / totalSteps) * 100}%` }}
                     />
                 </div>
@@ -601,7 +601,7 @@ function KYCUpgradeModal({
                                             key={type}
                                             onClick={() => setDocumentType(type)}
                                             className={`py-3 rounded-xl text-sm font-medium transition-all ${documentType === type
-                                                ? 'bg-gradient-to-r from-cyan-500 to-blue-500 text-white'
+                                                ? 'bg-cyan-500 text-white'
                                                 : 'bg-white/5 text-white/60 hover:bg-white/10'
                                                 }`}
                                         >
@@ -695,7 +695,7 @@ function KYCUpgradeModal({
                             whileTap={{ scale: 0.98 }}
                             onClick={handleNext}
                             disabled={loading || !canProceed()}
-                            className="flex-1 py-3 bg-gradient-to-r from-cyan-500 to-blue-500 text-white font-semibold rounded-xl disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="flex-1 py-3 bg-cyan-500 text-white font-semibold rounded-xl disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             {loading ? 'Processing...' : step === totalSteps ? 'Submit' : 'Continue'}
                         </motion.button>

@@ -9,6 +9,7 @@ interface GlassCardProps extends HTMLMotionProps<"div"> {
     className?: string;
     hoverEffect?: boolean;
     activeEffect?: boolean;
+    isDark?: boolean;
 }
 
 export default function GlassCard({
@@ -16,33 +17,40 @@ export default function GlassCard({
     className,
     hoverEffect = false,
     activeEffect = true,
+    isDark = true,
     ...props
 }: GlassCardProps) {
     return (
         <motion.div
             className={cn(
-                "glass rounded-2xl p-6 border border-white/10 shadow-xl relative overflow-hidden backdrop-blur-xl",
+                isDark ? "glass rounded-2xl p-6 border border-white/10 shadow-xl relative overflow-hidden backdrop-blur-xl" : "bg-white/40 backdrop-blur-sm rounded-2xl p-6 border border-gray-900/10 shadow-xl relative overflow-hidden",
                 hoverEffect && "cursor-pointer group",
                 className
             )}
             initial={false}
             whileHover={hoverEffect ? {
                 scale: 1.02,
-                backgroundColor: "rgba(255, 255, 255, 0.07)",
-                borderColor: "rgba(255, 255, 255, 0.2)",
-                boxShadow: "0 20px 40px -10px rgba(0, 0, 0, 0.4)"
+                backgroundColor: isDark ? "rgba(255, 255, 255, 0.07)" : "rgba(255, 255, 255, 0.6)",
+                borderColor: isDark ? "rgba(255, 255, 255, 0.2)" : "rgba(0, 0, 0, 0.2)",
+                boxShadow: isDark ? "0 20px 40px -10px rgba(0, 0, 0, 0.4)" : "0 20px 40px -10px rgba(0, 0, 0, 0.2)"
             } : undefined}
             whileTap={activeEffect && hoverEffect ? { scale: 0.98 } : undefined}
             transition={{ type: "spring", stiffness: 400, damping: 25 }}
             {...props}
         >
             {}
-            <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-transparent opacity-50 pointer-events-none" />
+            <div className={cn(
+                "absolute inset-0 opacity-50 pointer-events-none",
+                isDark ? "bg-white/10" : "bg-gray-900/10"
+            )} />
 
             {}
             {hoverEffect && (
                 <motion.div
-                    className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -skew-x-12 translate-x-[-100%]"
+                    className={cn(
+                        "absolute inset-0 -skew-x-12 translate-x-[-100%]",
+                        isDark ? "bg-white/5" : "bg-gray-900/5"
+                    )}
                     variants={{
                         hover: { translateX: "200%" }
                     }}
