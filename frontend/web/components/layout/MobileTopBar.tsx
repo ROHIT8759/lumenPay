@@ -178,3 +178,4 @@ function MenuItem({ icon, label, onClick, className = "" }: { icon: React.ReactN
         </button>
     );
 }
+
