@@ -1,24 +1,33 @@
 # Stellar Pay: The Non-Custodial Financial Revolution
 
-Welcome to **Stellar Pay** (formerly LumenPay). This documentation is designed to guide you through the philosophy, architecture, and implementation of a next-generation financial platform built on the Stellar Network.
+[![Stellar Network](https://img.shields.io/badge/Stellar-Testnet-1a73e8)](https://www.stellar.org/) [![Backend](https://img.shields.io/badge/Backend-Express.js-000000)](#technical-stack) [![Frontend](https://img.shields.io/badge/Frontend-Next.js-111827)](#technical-stack) [![License](https://img.shields.io/badge/License-MIT-10b981)](LICENSE)
+
+> 🚀 Next-gen, non-custodial finance stack for cross-border payments, RWA, and on/off-ramps on the Stellar Network.
+
+| Quick Links | Dev Env | Deploy |
+| --- | --- | --- |
+| [Getting Started](#getting-started) | `node >= 20` · `pnpm` · `docker` | [Docker Compose](#deployment-guide) · Railway/Vercel |
+| [Architecture](#core-architecture) | Backend: `npm run dev` | Backend: `nixpacks.toml` |
+| [Features](#features-deep-dive) | Indexer: `npm run indexer` | Frontend: Vercel |
 
 ---
 
 ## 📖 Table of Contents
 
-1.  [**Introduction**](#introduction)
-2.  [**The Philosophy**](#the-philosophy)
-3.  [**Core Architecture**](#core-architecture)
-4.  [**Features Deep Dive**](#features-deep-dive)
-    *   [Non-Custodial Wallet](#1-non-custodial-wallet)
-    *   [On/Off Ramps](#2-onoff-ramps)
-    *   [KYC & Compliance](#3-kyc--compliance)
-    *   [Real-World Assets (RWA)](#4-real-world-assets-rwa)
-    *   [Smart Contracts (Soroban)](#5-smart-contracts-soroban)
-5.  [**Technical Stack**](#technical-stack)
-6.  [**Getting Started**](#getting-started)
-7.  [**Deployment Guide**](#deployment-guide)
-8.  [**Roadmap**](#roadmap)
+1. [**Introduction**](#introduction)
+2. [**The Philosophy**](#the-philosophy)
+3. [**Core Architecture**](#core-architecture)
+4. [**Platform Snapshot**](#platform-snapshot)
+5. [**Features Deep Dive**](#features-deep-dive)
+   * [Non-Custodial Wallet](#1-non-custodial-wallet)
+   * [On/Off Ramps](#2-onoff-ramps)
+   * [KYC & Compliance](#3-kyc--compliance)
+   * [Real-World Assets (RWA)](#4-real-world-assets-rwa)
+   * [Smart Contracts (Soroban)](#5-smart-contracts-soroban)
+6. [**Technical Stack**](#technical-stack)
+7. [**Getting Started**](#getting-started)
+8. [**Deployment Guide**](#deployment-guide)
+9. [**Roadmap**](#roadmap)
 
 ---
 
@@ -57,6 +66,20 @@ graph TD
     Backend -->|Stores State| DB[(PostgreSQL)]
     Horizon -->|Consensus| StellarCore[Stellar Network]
 ```
+
+---
+
+## Platform Snapshot
+
+| Pillar | What it covers | Proof points |
+| --- | --- | --- |
+| Wallet & Signing | Local key generation, encrypted storage, transaction signing flows | Non-custodial by design; keys never touch the backend |
+| Liquidity & Ramps | Fiat on/off ramps, FX, settlement | INR/USD on-ramp and off-ramp intents, price-aware flows |
+| Compliance | Tiered KYC, PII isolation, status flags on-chain | KYC session + status endpoints, separated `kyc_records` table |
+| Indexing & State | Ledger polling, webhook-ready events, unified tx history | Custom indexer with restart-safe cursor in `indexer_state` |
+| Notifications | Telegram linking and alerts | `telegram_links` table and bot webhook endpoints |
+
+> TL;DR: Sign locally, settle on Stellar, coordinate off-chain services through a thin backend.
 
 ---
 
@@ -110,6 +133,16 @@ Leveraging Stellar's smart contract platform, Soroban:
 - **SDK**: `@stellar/stellar-sdk`.
 - **Network**: Stellar Testnet (Configurable).
 
+### Repo Map
+
+| Path | What lives here |
+| --- | --- |
+| `backend/` | Express API, indexer worker, Prisma schema, Supabase migrations |
+| `backend/contracts/` | Soroban contracts (Rust) for escrow, RWA, credit flows |
+| `frontend/web/` | Next.js web app, components, hooks, Supabase client |
+| `frontend/mobile/` | Expo mobile app (RN), shared styling and hooks |
+| `__tests__/` | API, component, contract, and integration test suites |
+
 ---
 
 ## Getting Started
@@ -154,6 +187,17 @@ Leveraging Stellar's smart contract platform, Soroban:
 
 Visit `http://localhost:3000` to access the web interface.
 
+### Quick Dev Launch (Cheat Sheet)
+
+| Service | Command | Port |
+| --- | --- | --- |
+| Backend API | `cd backend && npm run dev` | 3001 |
+| Indexer Worker | `cd backend && npm run indexer` | background job |
+| Web App | `cd frontend/web && npm run dev` | 3000 |
+| Mobile (Expo) | `cd frontend/mobile && npm start` | 8081 (Metro) |
+
+> Tip: keep backend and indexer in separate terminals; frontend auto-reloads.
+
 ---
 
 ## Deployment Guide
@@ -171,6 +215,15 @@ This spins up the API on port 3001 and the background indexer.
 ### Cloud (Railway/Vercel)
 - **Frontend**: Deploy `frontend/web` to Vercel.
 - **Backend**: Deploy `backend` to Railway. Use the provided `nixpacks.toml` for automatic configuration.
+
+### Deployment Matrix
+
+| Target | Frontend | Backend | Notes |
+| --- | --- | --- | --- |
+| Local Dev | `npm run dev` | `npm run dev` | Pair with local Postgres/Supabase |
+| Docker | `docker-compose up -d` | Included | Good for parity testing |
+| Railway | Deploy `frontend/web` elsewhere | `railway up` (uses `nixpacks.toml`) | Provide env vars + DATABASE_URL |
+| Vercel | `vercel` (Next.js) | Host backend separately | Configure NEXT_PUBLIC envs |
 
 ---
 
