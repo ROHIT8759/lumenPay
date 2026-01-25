@@ -26,9 +26,9 @@ export default function LandingPage() {
     const [isLoginOpen, setIsLoginOpen] = useState(false);
 
     const navItems = [
-      { name: 'Home', link: '#home' },
-      { name: 'About', link: '#about' },
-      { name: 'EXPO', link: '#expo' },
+        { name: 'Home', link: '#home' },
+        { name: 'About', link: '#about' },
+        { name: 'EXPO', link: '#expo' },
     ];
 
     return (
