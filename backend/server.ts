@@ -10,16 +10,13 @@ import ledgerRoutes from './routes/ledger';
 import rampRoutes from './routes/ramp';
 import stocksRoutes from './routes/stocks';
 import telegramRoutes from './routes/telegram';
-
-// Load env from root directory
+import billingRoutes from './routes/billing';
+import rwaRoutes from './routes/rwa';
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
-
 const app = express();
 const PORT = Number(process.env.PORT) || 3001;
 app.use(cors());
 app.use(express.json());
-
-// Health check
 app.get('/health', (req, res) => {
     res.json({
         status: 'healthy',
@@ -27,8 +24,6 @@ app.get('/health', (req, res) => {
         network: process.env.STELLAR_NETWORK || 'testnet',
     });
 });
-
-// API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/transactions', transactionRoutes);
 app.use('/api/escrow', escrowRoutes);
@@ -37,6 +32,8 @@ app.use('/api/ledger', ledgerRoutes);
 app.use('/api/ramp', rampRoutes);
 app.use('/api/stocks', stocksRoutes);
 app.use('/api/telegram', telegramRoutes);
+app.use('/api/billing', billingRoutes);
+app.use('/api/rwa', rwaRoutes);
 
 // Alias for PRD compatibility
 app.use('/api/tx', transactionRoutes);

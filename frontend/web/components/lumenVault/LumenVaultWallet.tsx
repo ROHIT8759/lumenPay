@@ -3,7 +3,7 @@
 
 
 import React from 'react';
-import { WalletProvider, useWallet } from './WalletProvider';
+import { useWallet } from './WalletProvider';
 import { CreateWallet } from './CreateWallet';
 import { ImportWallet } from './ImportWallet';
 import { UnlockWallet } from './UnlockWallet';
@@ -11,11 +11,7 @@ import { WalletDashboard } from './WalletDashboard';
 import { Loader2 } from 'lucide-react';
 
 export function LumenVaultWallet() {
-    return (
-        <WalletProvider>
-            <WalletContainer />
-        </WalletProvider>
-    );
+    return <WalletContainer />;
 }
 
 function WalletContainer() {

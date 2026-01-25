@@ -11,6 +11,7 @@ import { signingEngine } from '@/lib/lumenVault/signingEngine';
 import { walletAuth, AuthSession } from '@/lib/lumenVault/walletAuth';
 import { secureStorage } from '@/lib/lumenVault/secureStorage';
 import { NETWORK } from '@/lib/config';
+import { clearUnlockedKeypair, setUnlockedKeypair } from '@/lib/lumenVault/keyCache';
 
 export interface LumenVaultState {
     // Wallet state
@@ -123,6 +124,11 @@ export function useLumenVault(): [LumenVaultState, LumenVaultActions] {
             await secureStorage.storeWallet(data.publicKey, data);
             await secureStorage.storeSession(data.publicKey);
 
+            const session = await secureStorage.getSession();
+            if (session) {
+                setUnlockedKeypair(data.publicKey, keypair, session.expiresAt);
+            }
+
             setWalletData(data);
             setState(prev => ({
                 ...prev,
@@ -158,6 +164,11 @@ export function useLumenVault(): [LumenVaultState, LumenVaultActions] {
             await secureStorage.storeWallet(data.publicKey, data);
             await secureStorage.storeSession(data.publicKey);
 
+            const session = await secureStorage.getSession();
+            if (session) {
+                setUnlockedKeypair(data.publicKey, keypair, session.expiresAt);
+            }
+
             setWalletData(data);
             setState(prev => ({
                 ...prev,
@@ -185,9 +196,13 @@ export function useLumenVault(): [LumenVaultState, LumenVaultActions] {
 
         try {
             // Try to decrypt - will throw if wrong passphrase
-            await getKeypairFromWallet(walletData, passphrase);
+            const keypair = await getKeypairFromWallet(walletData, passphrase);
 
             await secureStorage.storeSession(walletData.publicKey);
+            const session = await secureStorage.getSession();
+            if (session) {
+                setUnlockedKeypair(walletData.publicKey, keypair, session.expiresAt);
+            }
             setState(prev => ({ ...prev, isLocked: false, error: null }));
             return true;
         } catch (_error: unknown) {
@@ -201,6 +216,7 @@ export function useLumenVault(): [LumenVaultState, LumenVaultActions] {
 
     const lockWallet = useCallback(() => {
         void secureStorage.clearSession();
+        clearUnlockedKeypair();
         setState(prev => ({ ...prev, isLocked: true }));
     }, []);
 
@@ -209,6 +225,7 @@ export function useLumenVault(): [LumenVaultState, LumenVaultActions] {
             await secureStorage.deleteWallet(walletData.publicKey);
         }
         await secureStorage.clearSession();
+        clearUnlockedKeypair();
         walletAuth.signOut();
         setWalletData(null);
         setState({
