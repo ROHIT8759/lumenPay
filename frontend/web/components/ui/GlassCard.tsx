@@ -10,6 +10,7 @@ interface GlassCardProps {
     hoverEffect?: boolean;
     activeEffect?: boolean;
     onClick?: () => void;
+    isDark?: boolean;
 }
 
 export default function GlassCard({
@@ -18,6 +19,7 @@ export default function GlassCard({
     hoverEffect = false,
     activeEffect = true,
     onClick,
+    isDark = true,
 }: GlassCardProps) {
     return (
         <motion.div

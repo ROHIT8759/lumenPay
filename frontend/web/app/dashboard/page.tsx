@@ -256,15 +256,9 @@ export default function Home() {
 
         {/* Empty State */}
         {!peopleLoading && people.length === 0 && (
-<<<<<<< HEAD
           <GlassCard className="p-4 sm:p-6 text-center">
             <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-gradient-to-br from-gray-800 to-black border border-white/10 flex items-center justify-center mx-auto mb-2 sm:mb-3">
               <Users className="text-gray-600" size={18} />
-=======
-          <GlassCard className="p-6 text-center">
-            <div className="w-12 h-12 rounded-full bg-gray-800 border border-white/10 flex items-center justify-center mx-auto mb-3">
-              <Users className="text-gray-600" size={20} />
->>>>>>> d2313b8740f23fdd69892335510d2561b485772c
             </div>
             <p className="text-gray-400 text-xs sm:text-sm mb-1">No contacts yet</p>
             <p className="text-gray-600 text-[10px] sm:text-xs">Send or receive money to see people here</p>
@@ -288,13 +282,8 @@ export default function Home() {
                       className="w-12 h-12 sm:w-14 sm:h-14 rounded-full object-cover border border-white/10 group-hover:border-blue-500/50 transition-colors"
                     />
                   ) : (
-<<<<<<< HEAD
                     <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-gradient-to-br from-blue-500/20 to-purple-500/20 border border-white/10 group-hover:border-blue-500/50 transition-colors flex items-center justify-center">
                       <span className="text-xs sm:text-sm font-bold text-blue-400">
-=======
-                    <div className="w-14 h-14 rounded-full bg-blue-500/20 border border-white/10 group-hover:border-blue-500/50 transition-colors flex items-center justify-center">
-                      <span className="text-sm font-bold text-blue-400">
->>>>>>> d2313b8740f23fdd69892335510d2561b485772c
                         {person.name.charAt(0).toUpperCase()}
                       </span>
                     </div>
@@ -413,7 +402,6 @@ export default function Home() {
         </Link>
       </motion.section>
 
-<<<<<<< HEAD
 
       {/* Wallet Balances - Dynamic from LumenVault */}
       {publicKey && !isLocked && balances.length > 0 && (
@@ -429,15 +417,6 @@ export default function Home() {
               <div className="p-2 bg-blue-500 rounded-lg">
                 <Banknote className="text-white" size={20} />
               </div>
-=======
-      {/* 6. Balance Card */}
-      <motion.section variants={item} className="pb-8">
-        <GlassCard className="bg-blue-900/40 border-blue-500/20">
-          <div className="flex justify-between items-start mb-4">
-            <div>
-              <h2 className="text-sm text-gray-300 mb-1">Total Balance</h2>
-              <div className="text-3xl font-bold font-mono tracking-tight">$12,450.00 <span className="text-sm text-gray-500 font-sans">USDC</span></div>
->>>>>>> d2313b8740f23fdd69892335510d2561b485772c
             </div>
             {/* Balance breakdown */}
             <div className="mb-3 space-y-1 max-h-20 overflow-y-auto">
@@ -846,3 +825,4 @@ function WithdrawModal({
     </div>
   );
 }
+

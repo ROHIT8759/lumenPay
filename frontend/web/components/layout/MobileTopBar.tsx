@@ -107,11 +107,7 @@ export default function MobileTopBar() {
                             </div>
 
                             <div className="flex flex-col items-center mb-8">
-<<<<<<< HEAD
                                 <div className="w-20 h-20 bg-gradient-to-tr from-blue-500 to-purple-500 rounded-full mb-4 flex items-center justify-center ring-4 ring-white/10">
-=======
-                                <div className="w-20 h-20 bg-blue-500 rounded-full mb-4 flex items-center justify-center">
->>>>>>> d2313b8740f23fdd69892335510d2561b485772c
                                     <User size={40} className="text-white" />
                                 </div>
                                 <h3 className="text-lg font-semibold">My Wallet</h3>
@@ -182,3 +178,4 @@ function MenuItem({ icon, label, onClick, className = "" }: { icon: React.ReactN
         </button>
     );
 }
+
