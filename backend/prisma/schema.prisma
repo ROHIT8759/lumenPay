@@ -232,3 +232,199 @@ model IndexerState {
   
   @@map("indexer_state")
 }
+
+// ============================================================
+// Loan Models
+// ============================================================
+
+model Loan {
+  id                  String          @id @default(uuid())
+  walletAddress       String
+  loanType            LoanType        @default(COLLATERAL)
+  principalAmount     Float
+  loanAmount          Float
+  interestRateBps     Int             // Basis points (10000 = 100%)
+  tenureDays          Int
+  amountRepaid        Float           @default(0)
+  amountOutstanding   Float
+  interestAccrued     Float           @default(0)
+  status              LoanStatus      @default(PENDING)
+  ltvRatio            Float?
+  liquidationThreshold Float          @default(80)
+  dueDate             DateTime?
+  disbursedAt         DateTime?
+  repaidAt            DateTime?
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
+  
+  collateral          LoanCollateral[]
+  
+  @@index([walletAddress])
+  @@index([status])
+  @@map("loans")
+}
+
+model LoanCollateral {
+  id              String          @id @default(uuid())
+  loanId          String
+  walletAddress   String
+  collateralType  CollateralType
+  assetCode       String
+  amount          Float
+  valueAtDeposit  Float
+  currentValue    Float?
+  isLocked        Boolean         @default(true)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  
+  loan            Loan            @relation(fields: [loanId], references: [id])
+  
+  @@index([loanId])
+  @@index([walletAddress])
+  @@map("loan_collateral")
+}
+
+enum LoanType {
+  COLLATERAL
+  FLASH
+}
+
+enum LoanStatus {
+  PENDING
+  ACTIVE
+  REPAID
+  DEFAULTED
+  LIQUIDATED
+  CANCELLED
+}
+
+enum CollateralType {
+  USDC
+  XLM
+  RWA
+}
+
+// ============================================================
+// RWA Models
+// ============================================================
+
+model RwaAsset {
+  id                  String          @id @default(uuid())
+  assetCode           String          @unique
+  issuerAddress       String
+  assetType           RwaAssetType
+  name                String
+  description         String?
+  detailedInfo        Json?
+  imageUrl            String?
+  documentUrls        String[]
+  unitPrice           Float
+  totalSupply         Float
+  availableSupply     Float
+  minInvestment       Float           @default(0)
+  maxInvestment       Float?
+  yieldType           YieldType       @default(NONE)
+  annualYieldPercent  Float           @default(0)
+  yieldFrequency      YieldFrequency  @default(NONE)
+  riskLevel           RiskLevel       @default(MEDIUM)
+  requiresKyc         Boolean         @default(false)
+  minKycLevel         Int             @default(0)
+  accreditedOnly      Boolean         @default(false)
+  status              AssetStatus     @default(PENDING)
+  isFeatured          Boolean         @default(false)
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
+  
+  holdings            RwaHolding[]
+  purchases           RwaPurchase[]
+  
+  @@index([assetType])
+  @@index([status])
+  @@map("rwa_assets")
+}
+
+model RwaHolding {
+  id                  String      @id @default(uuid())
+  walletAddress       String
+  assetId             String
+  quantity            Float
+  averageBuyPrice     Float
+  totalInvested       Float
+  totalYieldEarned    Float       @default(0)
+  pendingYield        Float       @default(0)
+  trustlineEstablished Boolean    @default(false)
+  firstPurchaseAt     DateTime    @default(now())
+  lastTransactionAt   DateTime    @default(now())
+  
+  asset               RwaAsset    @relation(fields: [assetId], references: [id])
+  
+  @@unique([walletAddress, assetId])
+  @@index([walletAddress])
+  @@map("rwa_holdings")
+}
+
+model RwaPurchase {
+  id              String          @id @default(uuid())
+  walletAddress   String
+  assetId         String
+  quantity        Float
+  pricePerUnit    Float
+  totalCost       Float
+  paymentAsset    String          @default("USDC")
+  txHash          String?
+  status          PurchaseStatus  @default(PENDING)
+  createdAt       DateTime        @default(now())
+  completedAt     DateTime?
+  
+  asset           RwaAsset        @relation(fields: [assetId], references: [id])
+  
+  @@index([walletAddress])
+  @@index([status])
+  @@map("rwa_purchases")
+}
+
+enum RwaAssetType {
+  REAL_ESTATE
+  BOND
+  COMMODITY
+  INVOICE
+  STABLE_YIELD
+  EQUITY_TOKEN
+}
+
+enum YieldType {
+  FIXED
+  VARIABLE
+  NONE
+}
+
+enum YieldFrequency {
+  DAILY
+  WEEKLY
+  MONTHLY
+  QUARTERLY
+  ANNUALLY
+  NONE
+}
+
+enum RiskLevel {
+  LOW
+  MEDIUM
+  HIGH
+  VERY_HIGH
+}
+
+enum AssetStatus {
+  ACTIVE
+  PAUSED
+  RETIRED
+  PENDING
+}
+
+enum PurchaseStatus {
+  PENDING
+  CONFIRMED
+  FAILED
+  CANCELLED
+}
+
