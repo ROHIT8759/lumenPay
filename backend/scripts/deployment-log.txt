@@ -1,0 +1,31 @@
+
+================================================================================
+                    LumenPay Contract Deployment Summary
+================================================================================
+
+Network: Stellar Testnet
+Deployed At: 2026-01-25T01:42:20.535Z
+
+CONTRACTS
+---------
+Escrow Contract ID: CBHQVSGPUIOUY2SNCWXWP2H7B6PZ6KREKCSUL6JZ7YMRRAN4ZFB5V62Z
+RWA Contract ID:    CDAW6MZ5OY55U7ALU6O3SBMXVN2LVUZCSXX4HYSMJA4FTONLOH5AKAGT
+
+ACCOUNTS
+--------
+Deployer Address: GDMPEFVQVXYS5EO6CKOXDWIL3I7CRNY4QHYWXUKBQKKNKSVRHR2JWJLC
+Admin Address:    GDMPEFVQVXYS5EO6CKOXDWIL3I7CRNY4QHYWXUKBQKKNKSVRHR2JWJLC
+
+NEXT STEPS
+----------
+1. The contract addresses have been saved to your .env file
+2. Run your frontend: cd frontend/web && npm run dev
+3. The contracts are ready to use on Stellar Testnet
+
+IMPORTANT NOTES
+---------------
+- These are testnet contract addresses
+- For mainnet deployment, update the network configuration
+- Keep your deployer secret key secure
+
+================================================================================

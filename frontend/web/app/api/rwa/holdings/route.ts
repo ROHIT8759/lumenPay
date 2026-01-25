@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase, isSupabaseConfigured } from '@/lib/supabaseClient';
-import { MOCK_USER_HOLDINGS } from '@/lib/mockData';
+import { supabase } from '@/lib/supabaseClient';
 
 export interface RWAHolding {
   id: string;
@@ -35,25 +34,6 @@ export async function GET(request: NextRequest) {
 
     if (!userId) {
       return NextResponse.json({ error: 'User ID required' }, { status: 400 });
-    }
-
-    
-    if (!isSupabaseConfigured()) {
-      console.log('[DEMO MODE] Using mock holdings data');
-      return NextResponse.json({
-        success: true,
-        holdings: MOCK_USER_HOLDINGS,
-        portfolio: {
-          total_invested: 0,
-          current_value: 0,
-          total_yield_earned: 0,
-          pending_yield: 0,
-          unrealized_gain: 0,
-          unrealized_gain_percent: 0,
-          num_holdings: 0,
-        },
-        demo: true,
-      });
     }
 
     const { data, error } = await supabase

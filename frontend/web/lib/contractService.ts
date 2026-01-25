@@ -223,12 +223,12 @@ export async function createPaymentRequest(
     const prepared = rpc.assembleTransaction(transaction, simulated).build();
     prepared.sign(requesterKeypair);
 
-    const result = await getServer().sendTransaction(prepared);
+    const result = await server.sendTransaction(prepared);
     
-    let status = await getServer().getTransaction(result.hash);
+    let status = await server.getTransaction(result.hash);
     while (status.status === 'NOT_FOUND') {
       await new Promise((resolve) => setTimeout(resolve, 1000));
-      status = await getServer().getTransaction(result.hash);
+      status = await server.getTransaction(result.hash);
     }
 
     if (status.status === 'SUCCESS') {

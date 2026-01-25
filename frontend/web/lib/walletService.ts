@@ -406,14 +406,19 @@ export const walletService = {
     walletService.instance.buildPaymentTransaction(...args),
   submitSignedTransaction: (...args: Parameters<NonCustodialWalletService['submitSignedTransaction']>) => 
     walletService.instance.submitSignedTransaction(...args),
-  getAccountBalance: (...args: Parameters<NonCustodialWalletService['getAccountBalance']>) => 
-    walletService.instance.getAccountBalance(...args),
-  getTransactionHistory: (...args: Parameters<NonCustodialWalletService['getTransactionHistory']>) => 
-    walletService.instance.getTransactionHistory(...args),
+  getBalance: (...args: Parameters<NonCustodialWalletService['getBalance']>) => 
+    walletService.instance.getBalance(...args),
+  accountExists: (...args: Parameters<NonCustodialWalletService['accountExists']>) => 
+    walletService.instance.accountExists(...args),
   fundTestnetAccount: (...args: Parameters<NonCustodialWalletService['fundTestnetAccount']>) => 
     walletService.instance.fundTestnetAccount(...args),
-  getAccountDetails: (...args: Parameters<NonCustodialWalletService['getAccountDetails']>) => 
-    walletService.instance.getAccountDetails(...args),
+  createStellarAccount: (...args: Parameters<NonCustodialWalletService['createStellarAccount']>) => 
+    walletService.instance.createStellarAccount(...args),
+  getTransactionDetails: (...args: Parameters<NonCustodialWalletService['getTransactionDetails']>) => 
+    walletService.instance.getTransactionDetails(...args),
+  isValidPublicKey: (publicKey: string) => walletService.instance.isValidPublicKey(publicKey),
+  buildCreateAccountTransaction: (...args: Parameters<NonCustodialWalletService['buildCreateAccountTransaction']>) => 
+    walletService.instance.buildCreateAccountTransaction(...args),
 };
 
 export { NonCustodialWalletService };

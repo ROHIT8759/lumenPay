@@ -1,6 +1,6 @@
 'use server';
 
-import { Keypair } from 'stellar-sdk';
+import { Keypair } from '@stellar/stellar-sdk';
 import { supabase } from '@/lib/supabaseClient';
 import { encryptKey } from '@/lib/encryption';
 

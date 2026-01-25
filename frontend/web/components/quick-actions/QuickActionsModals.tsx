@@ -2,10 +2,11 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { Scan, Send, Banknote, TrendingUp, X, AlertCircle, CheckCircle, Loader } from 'lucide-react';
+import { Scan, Send, Banknote, TrendingUp, X, AlertCircle, CheckCircle, Loader, ChevronRight } from 'lucide-react';
 import GlassCard from '@/components/ui/GlassCard';
 import jsQR from 'jsqr';
-import { signTransaction } from '@stellar/freighter-api';
+import { signingEngine } from '@/lib/lumenVault/signingEngine';
+import { secureStorage } from '@/lib/lumenVault/secureStorage';
 import { API } from '@/lib/config';
 import { walletService } from '@/lib/walletService';
 
@@ -18,7 +19,7 @@ const API_URL = API.BASE_URL;
 async function callQuickActionAPI(actionType: string, payload: any) {
     const userId = localStorage.getItem('userId');
     const token = localStorage.getItem('authToken');
-    
+
     if (!userId || !token) throw new Error('Not authenticated');
 
     const response = await fetch('/api/quick-actions', {
@@ -57,9 +58,10 @@ function QRScannerModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
     const [loading, setLoading] = useState(false);
     const [step, setStep] = useState<'scan' | 'amount' | 'success'>('scan');
     const [cameraActive, setCameraActive] = useState(false);
-    const [scanMode, setScanMode] = useState<'camera' | 'upload'>('camera');
+    const [scanMode, setScanMode] = useState<'camera' | 'upload' | 'manual'>('camera');
+    const [manualAddress, setManualAddress] = useState<string>('');
 
-    
+
     const startCamera = async () => {
         try {
             setError('');
@@ -74,10 +76,10 @@ function QRScannerModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
                 await videoRef.current.play();
                 setCameraActive(true);
 
-                
+
                 scanIntervalRef.current = window.setInterval(() => {
                     scanVideoFrame();
-                }, 200); 
+                }, 200);
             }
         } catch (err: any) {
             console.error('Camera error:', err);
@@ -86,7 +88,7 @@ function QRScannerModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
         }
     };
 
-    
+
     const scanVideoFrame = () => {
         const canvas = canvasRef.current;
         const video = videoRef.current;
@@ -115,7 +117,7 @@ function QRScannerModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
         }
     };
 
-    
+
     const handleQRCodeFound = (data: string) => {
         stopCamera();
         setScannedData(data);
@@ -123,7 +125,7 @@ function QRScannerModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
         setError('');
     };
 
-    
+
     const stopCamera = () => {
         if (scanIntervalRef.current) {
             clearInterval(scanIntervalRef.current);
@@ -138,7 +140,7 @@ function QRScannerModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
         setCameraActive(false);
     };
 
-    
+
     const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
         if (!file) return;
@@ -161,14 +163,14 @@ function QRScannerModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
             setError('Failed to process image: ' + err.message);
         } finally {
             setLoading(false);
-            
+
             if (fileInputRef.current) {
                 fileInputRef.current.value = '';
             }
         }
     };
 
-    
+
     const loadImageAsImageData = (file: File): Promise<ImageData> => {
         return new Promise((resolve, reject) => {
             const img = new Image();
@@ -183,7 +185,7 @@ function QRScannerModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
                     return;
                 }
 
-                
+
                 const maxSize = 1024;
                 let width = img.width;
                 let height = img.height;
@@ -215,7 +217,7 @@ function QRScannerModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
         });
     };
 
-    
+
     const handleConfirmPayment = async () => {
         if (!scannedData || !amount || parseFloat(amount) <= 0) {
             setError('Please enter a valid amount');
@@ -226,7 +228,7 @@ function QRScannerModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
         setError('');
 
         try {
-            
+
             const paymentResult = await callQuickActionAPI('scan_qr', {
                 scannedData,
                 amountXLM: amount,
@@ -234,7 +236,7 @@ function QRScannerModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
 
             setStep('success');
 
-            
+
             setTimeout(() => {
                 resetModal();
                 onClose();
@@ -246,7 +248,7 @@ function QRScannerModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
         }
     };
 
-    
+
     const resetModal = () => {
         stopCamera();
         setStep('scan');
@@ -254,9 +256,24 @@ function QRScannerModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
         setAmount('');
         setError('');
         setScanMode('camera');
+        setManualAddress('');
     };
 
-    
+    const handleManualAddressSubmit = () => {
+        const address = manualAddress.trim();
+        if (!address) {
+            setError('Please enter a Stellar address');
+            return;
+        }
+        // Basic Stellar address validation (starts with G and is 56 chars)
+        if (!address.startsWith('G') || address.length !== 56) {
+            setError('Invalid Stellar address format. Address should start with G and be 56 characters.');
+            return;
+        }
+        handleQRCodeFound(address);
+    };
+
+
     useEffect(() => {
         if (isOpen && step === 'scan' && scanMode === 'camera') {
             startCamera();
@@ -267,7 +284,7 @@ function QRScannerModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
         };
     }, [isOpen, step, scanMode]);
 
-    
+
     useEffect(() => {
         if (!isOpen) {
             resetModal();
@@ -292,7 +309,7 @@ function QRScannerModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
 
                 {step === 'scan' && (
                     <div className="space-y-4">
-                        {}
+                        { }
                         <div className="flex gap-2 bg-white/5 rounded-lg p-1">
                             <button
                                 onClick={() => setScanMode('camera')}
@@ -312,6 +329,15 @@ function QRScannerModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
                             >
                                 🖼️ Upload
                             </button>
+                            <button
+                                onClick={() => { stopCamera(); setScanMode('manual'); }}
+                                className={`flex-1 py-2 px-3 rounded-md text-sm font-medium transition-colors ${scanMode === 'manual'
+                                    ? 'bg-blue-600 text-white'
+                                    : 'text-gray-400 hover:text-white'
+                                    }`}
+                            >
+                                ✏️ Manual
+                            </button>
                         </div>
 
                         {scanMode === 'camera' ? (
@@ -323,7 +349,7 @@ function QRScannerModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
                                         playsInline
                                         muted
                                     />
-                                    {}
+                                    { }
                                     <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                                         <div className="w-48 h-48 border-2 border-blue-400 rounded-lg opacity-50">
                                             <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-blue-400 -translate-x-0.5 -translate-y-0.5" />
@@ -343,7 +369,7 @@ function QRScannerModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
                                     Position QR code within the frame
                                 </p>
                             </>
-                        ) : (
+                        ) : scanMode === 'upload' ? (
                             <div className="space-y-4">
                                 <input
                                     ref={fileInputRef}
@@ -370,7 +396,36 @@ function QRScannerModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
                                     </p>
                                 </label>
                             </div>
-                        )}
+                        ) : scanMode === 'manual' ? (
+                            <div className="space-y-4">
+                                <div className="bg-white/5 rounded-lg p-4">
+                                    <label className="text-sm text-gray-400 mb-2 block">
+                                        Enter Stellar Address
+                                    </label>
+                                    <input
+                                        type="text"
+                                        placeholder="G..."
+                                        value={manualAddress}
+                                        onChange={(e) => {
+                                            setManualAddress(e.target.value);
+                                            setError('');
+                                        }}
+                                        className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-3 text-white font-mono text-sm placeholder-gray-500 focus:outline-none focus:border-blue-400"
+                                        autoFocus
+                                    />
+                                    <p className="text-xs text-gray-500 mt-2">
+                                        Paste the recipient's Stellar public key (starts with G)
+                                    </p>
+                                </div>
+                                <button
+                                    onClick={handleManualAddressSubmit}
+                                    disabled={!manualAddress.trim()}
+                                    className="w-full py-3 bg-blue-600 hover:bg-blue-500 disabled:bg-gray-600 disabled:cursor-not-allowed rounded-lg text-sm font-medium transition-colors"
+                                >
+                                    Continue
+                                </button>
+                            </div>
+                        ) : null}
 
                         {error && (
                             <div className="bg-red-500/20 border border-red-500 rounded-lg p-3 flex gap-2 text-sm">
@@ -386,7 +441,7 @@ function QRScannerModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
                         <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-4">
                             <div className="flex items-center gap-2 mb-2">
                                 <CheckCircle size={16} className="text-green-400" />
-                                <p className="text-sm text-green-400 font-medium">QR Code Detected</p>
+                                <p className="text-sm text-green-400 font-medium">Recipient Address</p>
                             </div>
                             <p className="font-mono text-xs break-all text-gray-400">
                                 {scannedData.length > 60 ? scannedData.slice(0, 60) + '...' : scannedData}
@@ -457,16 +512,53 @@ function QRScannerModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
 }
 
 
-
-
-
+// Pay ID Modal with UPI and Bank options
 function PayIdModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
+    const [paymentMethod, setPaymentMethod] = useState<'wallet' | 'upi' | 'bank'>('wallet');
     const [recipient, setRecipient] = useState('');
     const [amount, setAmount] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [resolved, setResolved] = useState<any>(null);
-    const [step, setStep] = useState<'resolve' | 'amount' | 'signing' | 'success'>('resolve');
+    const [step, setStep] = useState<'method' | 'resolve' | 'amount' | 'signing' | 'success'>('method');
+
+    // UPI specific
+    const [upiId, setUpiId] = useState('');
+    const [upiName, setUpiName] = useState('');
+
+    // Bank specific
+    const [accountNumber, setAccountNumber] = useState('');
+    const [accountName, setAccountName] = useState('');
+    const [ifscCode, setIfscCode] = useState('');
+    const [confirmAccountNumber, setConfirmAccountNumber] = useState('');
+
+    // Exchange rate info
+    const [exchangeRate, setExchangeRate] = useState<number>(10.5); // 1 XLM = 10.5 INR
+    const [fiatAmount, setFiatAmount] = useState<string>('0');
+
+    const resetModal = () => {
+        setStep('method');
+        setPaymentMethod('wallet');
+        setRecipient('');
+        setAmount('');
+        setResolved(null);
+        setError('');
+        setUpiId('');
+        setUpiName('');
+        setAccountNumber('');
+        setAccountName('');
+        setIfscCode('');
+        setConfirmAccountNumber('');
+        setFiatAmount('0');
+    };
+
+    const calculateFiatAmount = (xlmAmount: string) => {
+        const xlm = parseFloat(xlmAmount) || 0;
+        const fee = xlm * 0.01; // 1% fee
+        const net = xlm - fee;
+        const fiat = net * exchangeRate;
+        setFiatAmount(fiat.toFixed(2));
+    };
 
     const handleResolve = async () => {
         if (!recipient) {
@@ -498,19 +590,23 @@ function PayIdModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void 
         setLoading(true);
         setStep('signing');
         try {
-            // Get the user's public key from localStorage
+            // Get the user's wallet from localStorage
             const walletType = localStorage.getItem('walletType');
             const token = localStorage.getItem('authToken');
-            
+
             // Determine sender address based on wallet type
             let senderAddress: string | null = null;
-            
-            if (walletType === 'freighter') {
-                // For Freighter, we need to get the address
-                const { getAddress } = await import('@stellar/freighter-api');
-                const addressResult = await getAddress();
-                if (addressResult.error) throw new Error(addressResult.error);
-                senderAddress = addressResult.address;
+
+            if (walletType === 'lumenvault') {
+                // For LumenVault, get the session first, then the wallet data
+                const session = await secureStorage.getSession();
+                if (!session) throw new Error('No LumenVault session found. Please unlock your wallet.');
+                const walletData = await secureStorage.getWallet(session.publicKey);
+                if (!walletData) throw new Error('No LumenVault wallet found');
+                senderAddress = walletData.publicKey;
+            } else if (walletType === 'internal') {
+                // For internal custodial wallet, get from localStorage
+                senderAddress = localStorage.getItem('walletAddress');
             } else {
                 throw new Error('Please connect a wallet first');
             }
@@ -531,18 +627,55 @@ function PayIdModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void 
                 throw new Error(buildResult.error);
             }
 
-            // 2. Sign with Freighter
-            const signResult = await signTransaction(buildResult.transaction.xdr, {
-                networkPassphrase: buildResult.transaction.networkPassphrase,
-            });
+            let signedXdr: string;
 
-            if (signResult.error) {
-                throw new Error(signResult.error);
+            if (walletType === 'lumenvault') {
+                // 2a. Sign with LumenVault
+                const session = await secureStorage.getSession();
+                if (!session) throw new Error('Wallet session expired');
+                const walletData = await secureStorage.getWallet(session.publicKey);
+                const passphrase = sessionStorage.getItem('walletPassphrase');
+
+                if (!walletData || !passphrase) {
+                    throw new Error('Wallet not unlocked. Please unlock your wallet first.');
+                }
+
+                const signResult = await signingEngine.signTransaction({
+                    xdr: buildResult.transaction.xdr,
+                    walletData,
+                    passphrase,
+                    network: 'testnet',
+                });
+
+                if (signResult.error) {
+                    throw new Error(signResult.error);
+                }
+
+                signedXdr = signResult.signedTransaction.signedXDR;
+            } else {
+                // 2b. For internal custodial wallet, use server-side signing
+                const signResponse = await fetch('/api/wallet/sign', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`,
+                    },
+                    body: JSON.stringify({
+                        xdr: buildResult.transaction.xdr,
+                    }),
+                });
+
+                if (!signResponse.ok) {
+                    throw new Error('Failed to sign transaction');
+                }
+
+                const signData = await signResponse.json();
+                signedXdr = signData.signedXdr;
             }
 
             // 3. Submit signed transaction
             const submitResult = await walletService.submitSignedTransaction(
-                signResult.signedTxXdr,
+                signedXdr,
                 token
             );
 
@@ -553,10 +686,7 @@ function PayIdModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void 
             setStep('success');
             setTimeout(() => {
                 onClose();
-                setStep('resolve');
-                setRecipient('');
-                setAmount('');
-                setResolved(null);
+                resetModal();
             }, 2000);
 
         } catch (err: any) {
@@ -567,21 +697,307 @@ function PayIdModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void 
         }
     };
 
+    const handleUPISubmit = async () => {
+        if (!upiId || !upiName || !amount) {
+            setError('Please fill all fields');
+            return;
+        }
+
+        // Validate UPI ID format
+        const upiRegex = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9]+$/;
+        if (!upiRegex.test(upiId)) {
+            setError('Invalid UPI ID format (e.g., name@upi)');
+            return;
+        }
+
+        setLoading(true);
+        setError('');
+
+        try {
+            // Get sender wallet address
+            const session = secureStorage.getSession();
+            let senderWallet = '';
+            if (session?.publicKey) {
+                senderWallet = session.publicKey;
+            } else {
+                senderWallet = localStorage.getItem('walletAddress') || '';
+            }
+            const userId = localStorage.getItem('userId') || '';
+
+            // Pool address for liquidity
+            const poolAddress = process.env.NEXT_PUBLIC_LIQUIDITY_POOL_ADDRESS || 'GDL74OJBVTL6FNOSUS6CJOGFLBHCNJL6LZ5VEIZZNPG36GIPALLJJTHE';
+
+            // Step 1: Send XLM to liquidity pool
+            if (session?.publicKey) {
+                const walletData = await secureStorage.getWallet(session.publicKey);
+                if (walletData?.encryptedSecret) {
+                    // Build and sign transaction to pool
+                    const txResult = await walletService.sendPayment({
+                        sourcePublicKey: senderWallet,
+                        destinationPublicKey: poolAddress,
+                        amount: amount,
+                        memo: `UPI:${upiId}`,
+                    });
+
+                    if (txResult.error) {
+                        throw new Error(txResult.error);
+                    }
+
+                    // Sign the transaction
+                    const signedXdr = await signingEngine.signTransaction(
+                        txResult.xdr!,
+                        walletData.encryptedSecret,
+                        'testnet'
+                    );
+
+                    // Submit to network
+                    const submitResponse = await fetch('/api/wallet/tx/submit', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ signedXdr, network: 'testnet' }),
+                    });
+
+                    if (!submitResponse.ok) {
+                        const err = await submitResponse.json();
+                        throw new Error(err.error || 'Failed to send XLM to pool');
+                    }
+
+                    const submitResult = await submitResponse.json();
+
+                    // Step 2: Record the off-ramp request
+                    const response = await fetch('/api/offramp/upi', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            senderWallet,
+                            userId,
+                            amountXlm: amount,
+                            upiId,
+                            recipientName: upiName,
+                            poolTxHash: submitResult.hash,
+                        }),
+                    });
+
+                    if (!response.ok) {
+                        const data = await response.json();
+                        throw new Error(data.error || 'Failed to create UPI request');
+                    }
+                } else {
+                    throw new Error('Wallet not found. Please unlock your wallet.');
+                }
+            } else {
+                throw new Error('Please connect your wallet first');
+            }
+
+            setStep('success');
+            setTimeout(() => {
+                onClose();
+                resetModal();
+            }, 3000);
+        } catch (err: any) {
+            setError(err.message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleBankSubmit = async () => {
+        if (!accountNumber || !accountName || !ifscCode || !amount) {
+            setError('Please fill all fields');
+            return;
+        }
+
+        if (accountNumber !== confirmAccountNumber) {
+            setError('Account numbers do not match');
+            return;
+        }
+
+        // Validate IFSC
+        const ifscRegex = /^[A-Z]{4}0[A-Z0-9]{6}$/;
+        if (!ifscRegex.test(ifscCode.toUpperCase())) {
+            setError('Invalid IFSC code format');
+            return;
+        }
+
+        setLoading(true);
+        setError('');
+
+        try {
+            // Get sender wallet address
+            const session = secureStorage.getSession();
+            let senderWallet = '';
+            if (session?.publicKey) {
+                senderWallet = session.publicKey;
+            } else {
+                senderWallet = localStorage.getItem('walletAddress') || '';
+            }
+            const userId = localStorage.getItem('userId') || '';
+
+            // Pool address for liquidity
+            const poolAddress = process.env.NEXT_PUBLIC_LIQUIDITY_POOL_ADDRESS || 'GDL74OJBVTL6FNOSUS6CJOGFLBHCNJL6LZ5VEIZZNPG36GIPALLJJTHE';
+
+            // Step 1: Send XLM to liquidity pool
+            if (session?.publicKey) {
+                const walletData = await secureStorage.getWallet(session.publicKey);
+                if (walletData?.encryptedSecret) {
+                    // Build and sign transaction to pool
+                    const txResult = await walletService.sendPayment({
+                        sourcePublicKey: senderWallet,
+                        destinationPublicKey: poolAddress,
+                        amount: amount,
+                        memo: `BANK:${accountNumber.slice(-4)}`,
+                    });
+
+                    if (txResult.error) {
+                        throw new Error(txResult.error);
+                    }
+
+                    // Sign the transaction
+                    const signedXdr = await signingEngine.signTransaction(
+                        txResult.xdr!,
+                        walletData.encryptedSecret,
+                        'testnet'
+                    );
+
+                    // Submit to network
+                    const submitResponse = await fetch('/api/wallet/tx/submit', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ signedXdr, network: 'testnet' }),
+                    });
+
+                    if (!submitResponse.ok) {
+                        const err = await submitResponse.json();
+                        throw new Error(err.error || 'Failed to send XLM to pool');
+                    }
+
+                    const submitResult = await submitResponse.json();
+
+                    // Step 2: Record the off-ramp request
+                    const response = await fetch('/api/offramp/bank', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            senderWallet,
+                            userId,
+                            amountXlm: amount,
+                            accountNumber,
+                            recipientName: accountName,
+                            ifscCode: ifscCode.toUpperCase(),
+                            poolTxHash: submitResult.hash,
+                        }),
+                    });
+
+                    if (!response.ok) {
+                        const data = await response.json();
+                        throw new Error(data.error || 'Failed to create bank request');
+                    }
+                } else {
+                    throw new Error('Wallet not found. Please unlock your wallet.');
+                }
+            } else {
+                throw new Error('Please connect your wallet first');
+            }
+
+            setStep('success');
+            setTimeout(() => {
+                onClose();
+                resetModal();
+            }, 3000);
+        } catch (err: any) {
+            setError(err.message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
     if (!isOpen) return null;
 
     return (
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
-            <GlassCard className="max-w-md w-full">
+            <GlassCard className="max-w-md w-full max-h-[90vh] overflow-y-auto">
                 <div className="flex justify-between items-center mb-6">
-                    <h2 className="text-xl font-bold">Send via Pay ID</h2>
-                    <button onClick={onClose} disabled={loading} className="text-gray-400 hover:text-white disabled:opacity-50">
+                    <h2 className="text-xl font-bold">
+                        {step === 'method' ? 'Send Money' :
+                            paymentMethod === 'upi' ? 'Send to UPI' :
+                                paymentMethod === 'bank' ? 'Send to Bank' : 'Send via Pay ID'}
+                    </h2>
+                    <button onClick={() => { resetModal(); onClose(); }} disabled={loading} className="text-gray-400 hover:text-white disabled:opacity-50">
                         <X size={20} />
                     </button>
                 </div>
 
                 <div className="space-y-4">
-                    {!resolved ? (
+                    {/* Step 1: Method Selection */}
+                    {step === 'method' && (
                         <>
+                            <p className="text-sm text-gray-400 mb-4">Choose how you want to send money</p>
+
+                            <div className="space-y-3">
+                                {/* Wallet/Pay ID Option */}
+                                <button
+                                    onClick={() => { setPaymentMethod('wallet'); setStep('resolve'); }}
+                                    className="w-full p-4 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-green-500/50 rounded-xl transition-all flex items-center gap-4"
+                                >
+                                    <div className="w-12 h-12 bg-green-500/20 rounded-full flex items-center justify-center">
+                                        <Send size={24} className="text-green-400" />
+                                    </div>
+                                    <div className="text-left flex-1">
+                                        <p className="font-medium">Wallet / Pay ID</p>
+                                        <p className="text-xs text-gray-400">Send to Stellar address or Pay ID</p>
+                                    </div>
+                                    <ChevronRight size={20} className="text-gray-500" />
+                                </button>
+
+                                {/* UPI Option */}
+                                <button
+                                    onClick={() => { setPaymentMethod('upi'); setStep('amount'); }}
+                                    className="w-full p-4 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-purple-500/50 rounded-xl transition-all flex items-center gap-4"
+                                >
+                                    <div className="w-12 h-12 bg-purple-500/20 rounded-full flex items-center justify-center">
+                                        <span className="text-xl">📱</span>
+                                    </div>
+                                    <div className="text-left flex-1">
+                                        <p className="font-medium">UPI Transfer</p>
+                                        <p className="text-xs text-gray-400">Send to any UPI ID • Usually within 1 hour</p>
+                                    </div>
+                                    <ChevronRight size={20} className="text-gray-500" />
+                                </button>
+
+                                {/* Bank Option */}
+                                <button
+                                    onClick={() => { setPaymentMethod('bank'); setStep('amount'); }}
+                                    className="w-full p-4 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-blue-500/50 rounded-xl transition-all flex items-center gap-4"
+                                >
+                                    <div className="w-12 h-12 bg-blue-500/20 rounded-full flex items-center justify-center">
+                                        <Banknote size={24} className="text-blue-400" />
+                                    </div>
+                                    <div className="text-left flex-1">
+                                        <p className="font-medium">Bank Transfer</p>
+                                        <p className="text-xs text-gray-400">Send to bank account • May take up to 24 hours</p>
+                                    </div>
+                                    <ChevronRight size={20} className="text-gray-500" />
+                                </button>
+                            </div>
+
+                            <button
+                                onClick={onClose}
+                                className="w-full py-2.5 bg-white/10 hover:bg-white/20 rounded-lg text-sm font-medium transition-colors mt-4"
+                            >
+                                Cancel
+                            </button>
+                        </>
+                    )}
+
+                    {/* Wallet/Pay ID Flow */}
+                    {paymentMethod === 'wallet' && step === 'resolve' && (
+                        <>
+                            <button
+                                onClick={() => setStep('method')}
+                                className="flex items-center gap-2 text-sm text-gray-400 hover:text-white mb-2"
+                            >
+                                ← Back
+                            </button>
                             <div>
                                 <label className="text-sm text-gray-400 mb-2 block">Pay ID or Wallet Address</label>
                                 <input
@@ -603,7 +1019,7 @@ function PayIdModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void 
 
                             <div className="flex gap-2">
                                 <button
-                                    onClick={onClose}
+                                    onClick={() => setStep('method')}
                                     className="flex-1 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-sm font-medium transition-colors"
                                     disabled={loading}
                                 >
@@ -619,7 +1035,9 @@ function PayIdModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void 
                                 </button>
                             </div>
                         </>
-                    ) : (
+                    )}
+
+                    {paymentMethod === 'wallet' && resolved && step === 'amount' && (
                         <>
                             <div className="bg-white/5 border border-white/10 rounded-lg p-4">
                                 <p className="text-sm text-gray-400 mb-2">Sending to</p>
@@ -653,6 +1071,7 @@ function PayIdModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void 
                                         setResolved(null);
                                         setAmount('');
                                         setError('');
+                                        setStep('resolve');
                                     }}
                                     className="flex-1 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-sm font-medium transition-colors"
                                     disabled={loading}
@@ -670,14 +1089,236 @@ function PayIdModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void 
                             </div>
                         </>
                     )}
+
+                    {/* UPI Flow */}
+                    {paymentMethod === 'upi' && step === 'amount' && (
+                        <>
+                            <button
+                                onClick={() => setStep('method')}
+                                className="flex items-center gap-2 text-sm text-gray-400 hover:text-white mb-2"
+                            >
+                                ← Back
+                            </button>
+
+                            <div className="bg-purple-500/10 border border-purple-500/30 rounded-lg p-3 flex gap-2 text-sm mb-2">
+                                <span className="text-purple-400">⚡</span>
+                                <span className="text-purple-300">UPI transfers are usually processed within 1 hour</span>
+                            </div>
+
+                            <div>
+                                <label className="text-sm text-gray-400 mb-2 block">Amount (XLM)</label>
+                                <input
+                                    type="number"
+                                    placeholder="0.00"
+                                    value={amount}
+                                    onChange={(e) => {
+                                        setAmount(e.target.value);
+                                        calculateFiatAmount(e.target.value);
+                                    }}
+                                    className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-purple-400"
+                                    disabled={loading}
+                                />
+                                {amount && parseFloat(amount) > 0 && (
+                                    <p className="text-xs text-gray-400 mt-1">
+                                        ≈ ₹{fiatAmount} INR (after 1% fee)
+                                    </p>
+                                )}
+                            </div>
+
+                            <div>
+                                <label className="text-sm text-gray-400 mb-2 block">UPI ID</label>
+                                <input
+                                    type="text"
+                                    placeholder="name@upi"
+                                    value={upiId}
+                                    onChange={(e) => setUpiId(e.target.value)}
+                                    className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-purple-400"
+                                    disabled={loading}
+                                />
+                            </div>
+
+                            <div>
+                                <label className="text-sm text-gray-400 mb-2 block">Recipient Name</label>
+                                <input
+                                    type="text"
+                                    placeholder="John Doe"
+                                    value={upiName}
+                                    onChange={(e) => setUpiName(e.target.value)}
+                                    className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-purple-400"
+                                    disabled={loading}
+                                />
+                            </div>
+
+                            {error && (
+                                <div className="bg-red-500/20 border border-red-500 rounded-lg p-3 flex gap-2 text-sm">
+                                    <AlertCircle size={16} className="text-red-400 flex-shrink-0" />
+                                    <span>{error}</span>
+                                </div>
+                            )}
+
+                            <div className="flex gap-2">
+                                <button
+                                    onClick={() => setStep('method')}
+                                    className="flex-1 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-sm font-medium transition-colors"
+                                    disabled={loading}
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={handleUPISubmit}
+                                    className="flex-1 py-2 bg-purple-600 hover:bg-purple-500 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                                    disabled={loading || !amount || !upiId || !upiName}
+                                >
+                                    {loading && <Loader size={16} className="animate-spin" />}
+                                    Send to UPI
+                                </button>
+                            </div>
+                        </>
+                    )}
+
+                    {/* Bank Flow */}
+                    {paymentMethod === 'bank' && step === 'amount' && (
+                        <>
+                            <button
+                                onClick={() => setStep('method')}
+                                className="flex items-center gap-2 text-sm text-gray-400 hover:text-white mb-2"
+                            >
+                                ← Back
+                            </button>
+
+                            <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-3 flex gap-2 text-sm mb-2">
+                                <AlertCircle size={16} className="text-yellow-400 flex-shrink-0 mt-0.5" />
+                                <span className="text-yellow-300">Bank transfers may take up to 24 hours to process</span>
+                            </div>
+
+                            <div>
+                                <label className="text-sm text-gray-400 mb-2 block">Amount (XLM)</label>
+                                <input
+                                    type="number"
+                                    placeholder="0.00"
+                                    value={amount}
+                                    onChange={(e) => {
+                                        setAmount(e.target.value);
+                                        calculateFiatAmount(e.target.value);
+                                    }}
+                                    className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-blue-400"
+                                    disabled={loading}
+                                />
+                                {amount && parseFloat(amount) > 0 && (
+                                    <p className="text-xs text-gray-400 mt-1">
+                                        ≈ ₹{fiatAmount} INR (after 1% fee)
+                                    </p>
+                                )}
+                            </div>
+
+                            <div>
+                                <label className="text-sm text-gray-400 mb-2 block">Account Holder Name</label>
+                                <input
+                                    type="text"
+                                    placeholder="As per bank records"
+                                    value={accountName}
+                                    onChange={(e) => setAccountName(e.target.value)}
+                                    className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-blue-400"
+                                    disabled={loading}
+                                />
+                            </div>
+
+                            <div>
+                                <label className="text-sm text-gray-400 mb-2 block">Account Number</label>
+                                <input
+                                    type="text"
+                                    placeholder="Enter account number"
+                                    value={accountNumber}
+                                    onChange={(e) => setAccountNumber(e.target.value.replace(/\D/g, ''))}
+                                    className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-blue-400"
+                                    disabled={loading}
+                                />
+                            </div>
+
+                            <div>
+                                <label className="text-sm text-gray-400 mb-2 block">Confirm Account Number</label>
+                                <input
+                                    type="text"
+                                    placeholder="Re-enter account number"
+                                    value={confirmAccountNumber}
+                                    onChange={(e) => setConfirmAccountNumber(e.target.value.replace(/\D/g, ''))}
+                                    className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-blue-400"
+                                    disabled={loading}
+                                />
+                                {confirmAccountNumber && accountNumber !== confirmAccountNumber && (
+                                    <p className="text-xs text-red-400 mt-1">Account numbers do not match</p>
+                                )}
+                            </div>
+
+                            <div>
+                                <label className="text-sm text-gray-400 mb-2 block">IFSC Code</label>
+                                <input
+                                    type="text"
+                                    placeholder="e.g., SBIN0001234"
+                                    value={ifscCode}
+                                    onChange={(e) => setIfscCode(e.target.value.toUpperCase())}
+                                    maxLength={11}
+                                    className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-blue-400"
+                                    disabled={loading}
+                                />
+                            </div>
+
+                            {error && (
+                                <div className="bg-red-500/20 border border-red-500 rounded-lg p-3 flex gap-2 text-sm">
+                                    <AlertCircle size={16} className="text-red-400 flex-shrink-0" />
+                                    <span>{error}</span>
+                                </div>
+                            )}
+
+                            <div className="flex gap-2">
+                                <button
+                                    onClick={() => setStep('method')}
+                                    className="flex-1 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-sm font-medium transition-colors"
+                                    disabled={loading}
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={handleBankSubmit}
+                                    className="flex-1 py-2 bg-blue-600 hover:bg-blue-500 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                                    disabled={loading || !amount || !accountNumber || !accountName || !ifscCode || accountNumber !== confirmAccountNumber}
+                                >
+                                    {loading && <Loader size={16} className="animate-spin" />}
+                                    Send to Bank
+                                </button>
+                            </div>
+                        </>
+                    )}
+
+                    {/* Success State */}
+                    {step === 'success' && (
+                        <div className="text-center py-8">
+                            <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <CheckCircle size={32} className="text-green-400" />
+                            </div>
+                            <h3 className="text-lg font-bold text-white mb-2">
+                                {paymentMethod === 'wallet' ? 'Payment Sent!' : 'Request Submitted!'}
+                            </h3>
+                            <p className="text-gray-400 text-sm">
+                                {paymentMethod === 'wallet' && `${amount} XLM transferred successfully`}
+                                {paymentMethod === 'upi' && `₹${fiatAmount} will be sent to ${upiId} within 1 hour`}
+                                {paymentMethod === 'bank' && (
+                                    <>
+                                        ₹{fiatAmount} will be credited to your bank account
+                                        <br />
+                                        <span className="text-yellow-400 text-xs mt-2 block">
+                                            ⏱️ May take up to 24 hours
+                                        </span>
+                                    </>
+                                )}
+                            </p>
+                        </div>
+                    )}
                 </div>
             </GlassCard>
         </div>
     );
 }
-
-
-
 
 
 function BankPayoutModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
@@ -857,7 +1498,7 @@ function BankPayoutModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => 
 
 
 function CryptoTradingModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
-    
+
     const defaultAssets = [
         { id: '1', symbol: 'BTC', name: 'Bitcoin', price_usd: '97500.00', percent_change_24h: '2.45' },
         { id: '2', symbol: 'ETH', name: 'Ethereum', price_usd: '3650.50', percent_change_24h: '1.82' },
@@ -885,7 +1526,7 @@ function CryptoTradingModal({ isOpen, onClose }: { isOpen: boolean; onClose: () 
     const [hoverIndex, setHoverIndex] = useState<number | null>(null);
     const chartRef = useRef<SVGSVGElement>(null);
 
-    
+
     const generateChartData = (asset: any, period: string) => {
         const currentPrice = parseFloat(asset.price_usd);
         const points: number[] = [];
@@ -895,28 +1536,28 @@ function CryptoTradingModal({ isOpen, onClose }: { isOpen: boolean; onClose: () 
 
         switch (period) {
             case '1D':
-                numPoints = 24; 
+                numPoints = 24;
                 volatility = 0.02;
                 trend = parseFloat(asset.percent_change_24h) / 100 / 24;
                 break;
             case '1M':
-                numPoints = 30; 
+                numPoints = 30;
                 volatility = 0.05;
                 trend = 0.001;
                 break;
             case '1Y':
-                numPoints = 52; 
+                numPoints = 52;
                 volatility = 0.1;
                 trend = 0.005;
                 break;
             case '5Y':
-                numPoints = 60; 
+                numPoints = 60;
                 volatility = 0.15;
                 trend = 0.008;
                 break;
         }
 
-        
+
         let price = currentPrice;
         for (let i = numPoints; i >= 0; i--) {
             points.unshift(price);
@@ -927,7 +1568,7 @@ function CryptoTradingModal({ isOpen, onClose }: { isOpen: boolean; onClose: () 
         return points;
     };
 
-    
+
     const getChartPath = (data: number[]) => {
         if (data.length < 2) return '';
 
@@ -948,13 +1589,13 @@ function CryptoTradingModal({ isOpen, onClose }: { isOpen: boolean; onClose: () 
         return `M ${points.join(' L ')}`;
     };
 
-    
+
     const getChartColor = (data: number[]) => {
         if (data.length < 2) return '#60a5fa';
         return data[data.length - 1] >= data[0] ? '#4ade80' : '#f87171';
     };
 
-    
+
     const getPercentChange = (data: number[]) => {
         if (data.length < 2) return 0;
         const first = data[0];
@@ -962,7 +1603,7 @@ function CryptoTradingModal({ isOpen, onClose }: { isOpen: boolean; onClose: () 
         return ((last - first) / first) * 100;
     };
 
-    
+
     const handleChartInteraction = (e: React.MouseEvent<SVGSVGElement> | React.TouchEvent<SVGSVGElement>) => {
         if (!chartRef.current || chartData.length < 2) return;
 
@@ -983,7 +1624,7 @@ function CryptoTradingModal({ isOpen, onClose }: { isOpen: boolean; onClose: () 
         setHoverIndex(index);
     };
 
-    
+
     const getPointCoordinates = (data: number[], index: number) => {
         if (data.length < 2 || index < 0 || index >= data.length) return { x: 0, y: 0 };
 
@@ -1001,7 +1642,7 @@ function CryptoTradingModal({ isOpen, onClose }: { isOpen: boolean; onClose: () 
         return { x, y };
     };
 
-    
+
     const getTimeLabel = (index: number, period: string, totalPoints: number) => {
         const ago = totalPoints - 1 - index;
         switch (period) {
@@ -1055,10 +1696,10 @@ function CryptoTradingModal({ isOpen, onClose }: { isOpen: boolean; onClose: () 
             if (data.assets && data.assets.length > 0) {
                 setAssets(data.assets);
             }
-            
+
         } catch (err) {
             console.error('Failed to fetch assets, using defaults:', err);
-            
+
         }
     };
 
@@ -1102,7 +1743,7 @@ function CryptoTradingModal({ isOpen, onClose }: { isOpen: boolean; onClose: () 
         ? (parseFloat(quantity) * parseFloat(selectedAsset.price_usd)).toFixed(2)
         : '0.00';
 
-    
+
     const chartData = selectedAsset ? generateChartData(selectedAsset, chartPeriod) : [];
     const chartColor = getChartColor(chartData);
     const chartPath = getChartPath(chartData);
@@ -1134,7 +1775,7 @@ function CryptoTradingModal({ isOpen, onClose }: { isOpen: boolean; onClose: () 
                     </div>
                 ) : (
                     <div className="space-y-4 flex-1 overflow-y-auto">
-                        {}
+                        { }
                         <div className="flex gap-2 bg-white/5 rounded-lg p-1">
                             {(['buy', 'sell'] as const).map((type) => (
                                 <button
@@ -1153,7 +1794,7 @@ function CryptoTradingModal({ isOpen, onClose }: { isOpen: boolean; onClose: () 
                             ))}
                         </div>
 
-                        {}
+                        { }
                         <div>
                             <label className="text-sm text-gray-400 mb-2 block">Select Asset</label>
                             <div className="space-y-2 max-h-[200px] overflow-y-auto pr-1">
@@ -1190,7 +1831,7 @@ function CryptoTradingModal({ isOpen, onClose }: { isOpen: boolean; onClose: () 
                             </div>
                         </div>
 
-                        {}
+                        { }
                         {selectedAsset && (
                             <div className="bg-white/5 rounded-lg p-4 space-y-3">
                                 <div className="flex justify-between items-center">
@@ -1206,10 +1847,10 @@ function CryptoTradingModal({ isOpen, onClose }: { isOpen: boolean; onClose: () 
                                     </div>
                                 </div>
 
-                                {}
+                                { }
                                 {showChart && (
                                     <div className="space-y-2">
-                                        {}
+                                        { }
                                         <div className="flex gap-1 bg-black/30 rounded-lg p-1">
                                             {(['1D', '1M', '1Y', '5Y'] as const).map((period) => (
                                                 <button
@@ -1225,7 +1866,7 @@ function CryptoTradingModal({ isOpen, onClose }: { isOpen: boolean; onClose: () 
                                             ))}
                                         </div>
 
-                                        {}
+                                        { }
                                         <div className="bg-black/30 rounded-lg p-3">
                                             <div className="flex justify-between items-center mb-2">
                                                 <span className="text-xs text-gray-500">
@@ -1248,12 +1889,12 @@ function CryptoTradingModal({ isOpen, onClose }: { isOpen: boolean; onClose: () 
                                                 onMouseLeave={() => setHoverIndex(null)}
                                                 onTouchEnd={() => setHoverIndex(null)}
                                             >
-                                                {}
+                                                { }
                                                 <line x1="5" y1="25" x2="95" y2="25" stroke="rgba(255,255,255,0.1)" strokeWidth="0.5" />
                                                 <line x1="5" y1="50" x2="95" y2="50" stroke="rgba(255,255,255,0.1)" strokeWidth="0.5" />
                                                 <line x1="5" y1="75" x2="95" y2="75" stroke="rgba(255,255,255,0.1)" strokeWidth="0.5" />
 
-                                                {}
+                                                { }
                                                 <defs>
                                                     <linearGradient id={`chartGradient-${selectedAsset.id}`} x1="0" y1="0" x2="0" y2="1">
                                                         <stop offset="0%" stopColor={chartColor} stopOpacity="0.3" />
@@ -1261,7 +1902,7 @@ function CryptoTradingModal({ isOpen, onClose }: { isOpen: boolean; onClose: () 
                                                     </linearGradient>
                                                 </defs>
 
-                                                {}
+                                                { }
                                                 {chartPath && (
                                                     <path
                                                         d={`${chartPath} L 95,95 L 5,95 Z`}
@@ -1269,7 +1910,7 @@ function CryptoTradingModal({ isOpen, onClose }: { isOpen: boolean; onClose: () 
                                                     />
                                                 )}
 
-                                                {}
+                                                { }
                                                 <path
                                                     d={chartPath}
                                                     fill="none"
@@ -1279,12 +1920,12 @@ function CryptoTradingModal({ isOpen, onClose }: { isOpen: boolean; onClose: () 
                                                     strokeLinejoin="round"
                                                 />
 
-                                                {}
+                                                { }
                                                 {hoverIndex !== null && (() => {
                                                     const point = getPointCoordinates(chartData, hoverIndex);
                                                     return (
                                                         <>
-                                                            {}
+                                                            { }
                                                             <line
                                                                 x1={point.x}
                                                                 y1="5"
@@ -1294,7 +1935,7 @@ function CryptoTradingModal({ isOpen, onClose }: { isOpen: boolean; onClose: () 
                                                                 strokeWidth="0.5"
                                                                 strokeDasharray="2,2"
                                                             />
-                                                            {}
+                                                            { }
                                                             <line
                                                                 x1="5"
                                                                 y1={point.y}
@@ -1304,7 +1945,7 @@ function CryptoTradingModal({ isOpen, onClose }: { isOpen: boolean; onClose: () 
                                                                 strokeWidth="0.3"
                                                                 strokeDasharray="1,2"
                                                             />
-                                                            {}
+                                                            { }
                                                             <circle
                                                                 cx={point.x}
                                                                 cy={point.y}
@@ -1318,7 +1959,7 @@ function CryptoTradingModal({ isOpen, onClose }: { isOpen: boolean; onClose: () 
                                                 })()}
                                             </svg>
 
-                                            {}
+                                            { }
                                             {hoverIndex !== null && (
                                                 <div className="flex justify-between items-center bg-white/10 rounded px-2 py-1 mt-2">
                                                     <span className="text-xs text-gray-400">
@@ -1340,7 +1981,7 @@ function CryptoTradingModal({ isOpen, onClose }: { isOpen: boolean; onClose: () 
                                             </div>
                                         </div>
 
-                                        {}
+                                        { }
                                         <div className="flex justify-between text-xs">
                                             <div>
                                                 <span className="text-gray-500">Low: </span>
@@ -1389,7 +2030,7 @@ function CryptoTradingModal({ isOpen, onClose }: { isOpen: boolean; onClose: () 
                             </div>
                         )}
 
-                        {}
+                        { }
                         <div className="flex gap-2 pt-2">
                             <button
                                 onClick={onClose}
@@ -1429,7 +2070,7 @@ interface ActionBtnProps {
 }
 
 function ActionBtn({ icon, label, color, onClick }: ActionBtnProps) {
-    const iconWithColor = React.cloneElement(icon as React.ReactElement, {
+    const iconWithColor = React.cloneElement(icon as React.ReactElement<{ size?: number; className?: string }>, {
         size: 24,
         className: color,
     });

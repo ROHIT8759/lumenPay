@@ -8,15 +8,16 @@ const supabase = createClient(
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { personId: string } }
+  { params }: { params: Promise<{ personId: string }> }
 ) {
   try {
+    const { personId } = await params;
     const userId = request.headers.get("x-user-id");
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const personAddress = params.personId; 
+    const personAddress = personId; 
     if (!personAddress) {
       return NextResponse.json({ error: "Person ID required" }, { status: 400 });
     }

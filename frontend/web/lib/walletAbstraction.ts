@@ -387,14 +387,18 @@ export const walletAbstraction = {
     getNetworkPassphrase: () => walletAbstraction.instance.getNetworkPassphrase(),
     buildPaymentTransaction: (...args: Parameters<WalletAbstraction['buildPaymentTransaction']>) => 
         walletAbstraction.instance.buildPaymentTransaction(...args),
-    submitTransaction: (...args: Parameters<WalletAbstraction['submitTransaction']>) => 
-        walletAbstraction.instance.submitTransaction(...args),
-    getAccountBalances: (...args: Parameters<WalletAbstraction['getAccountBalances']>) => 
-        walletAbstraction.instance.getAccountBalances(...args),
+    submitSignedTransaction: (...args: Parameters<WalletAbstraction['submitSignedTransaction']>) => 
+        walletAbstraction.instance.submitSignedTransaction(...args),
+    getBalances: (...args: Parameters<WalletAbstraction['getBalances']>) => 
+        walletAbstraction.instance.getBalances(...args),
+    accountExists: (...args: Parameters<WalletAbstraction['accountExists']>) => 
+        walletAbstraction.instance.accountExists(...args),
     getTransactionHistory: (...args: Parameters<WalletAbstraction['getTransactionHistory']>) => 
         walletAbstraction.instance.getTransactionHistory(...args),
     fundTestnetAccount: (...args: Parameters<WalletAbstraction['fundTestnetAccount']>) => 
         walletAbstraction.instance.fundTestnetAccount(...args),
-    getPublicKeyFromUserId: (...args: Parameters<WalletAbstraction['getPublicKeyFromUserId']>) => 
-        walletAbstraction.instance.getPublicKeyFromUserId(...args),
+    registerWallet: (...args: Parameters<WalletAbstraction['registerWallet']>) => 
+        walletAbstraction.instance.registerWallet(...args),
+    getRegisteredWallet: (...args: Parameters<WalletAbstraction['getRegisteredWallet']>) => 
+        walletAbstraction.instance.getRegisteredWallet(...args),
 };

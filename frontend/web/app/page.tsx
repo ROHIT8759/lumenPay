@@ -317,7 +317,7 @@ function LandingNavbar({ onLogin }: { onLogin: () => void }) {
     );
 }
 
-function FeatureCard({ icon, title, desc }: { icon: React.ReactElement; title: string; desc: string }) {
+function FeatureCard({ icon, title, desc }: { icon: React.ReactElement<{ size?: number }>; title: string; desc: string }) {
     return (
         <motion.div variants={fadeInUp}>
             <GlassCard className="flex flex-col items-center text-center gap-3 sm:gap-4 p-6 sm:p-8 lg:py-10 h-full">

@@ -66,7 +66,10 @@ const DEFAULT_INTEREST_RATES: Record<number, number> = {
 
 
 class LoanEscrowService {
+    private demoMode: boolean;
+    
     constructor() {
+        this.demoMode = process.env.KYC_DEMO_MODE === 'true';
     }
 
     

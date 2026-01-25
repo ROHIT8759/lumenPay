@@ -1,8 +1,6 @@
-
-
 import { NextRequest, NextResponse } from 'next/server';
 import { walletService } from '@/lib/walletService';
-import { createClient } from '@/lib/supabaseClient';
+import { createClient } from '@supabase/supabase-js';
 import { Keypair } from '@stellar/stellar-sdk';
 import crypto from 'crypto';
 
@@ -45,6 +43,12 @@ export async function GET(req: NextRequest) {
       .select('public_key, created_at')
       .eq('user_id', userId)
       .single();
+
+    if (fetchError && fetchError.code !== 'PGRST116') {
+      // PGRST116 = no rows found, which is OK
+      console.error('Error fetching wallet:', fetchError);
+      return NextResponse.json({ error: 'Database error' }, { status: 500 });
+    }
 
     if (existingWallet) {
       // Return existing wallet
@@ -99,4 +103,6 @@ export async function GET(req: NextRequest) {
 
   } catch (error: any) {
     console.error('Wallet API error:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
 }

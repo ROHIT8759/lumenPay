@@ -12,11 +12,13 @@ export type BiometricType =
 
 
 // We use a type-safe way to load expo-local-authentication
-let LocalAuthentication: typeof import('expo-local-authentication') | null = null;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let LocalAuthentication: any = null;
 
 async function loadLocalAuth() {
     if (typeof window !== 'undefined' && (window as { expo?: unknown }).expo) {
         try {
+            // @ts-expect-error - expo-local-authentication is only available in Expo/React Native
             LocalAuthentication = await import('expo-local-authentication');
         } catch {
             // Module not available

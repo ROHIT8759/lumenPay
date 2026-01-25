@@ -97,6 +97,16 @@ export const API = {
     PORTFOLIO: '/api/stocks/portfolio',
   },
 
+  // Stock Trading Smart Contract endpoints
+  TRADING_CONTRACT: {
+    ASSETS: '/api/trading/assets',
+    HOLDINGS: '/api/trading/holdings',
+    ORDERS: '/api/trading/orders',
+    BUY: '/api/trading/buy',
+    SELL: '/api/trading/sell',
+    PORTFOLIO: '/api/trading/portfolio',
+  },
+
   // Telegram endpoints
   TELEGRAM: {
     LINK_REQUEST: '/api/telegram/link/request',
@@ -190,6 +200,22 @@ export function getUSDCAsset() {
     : ASSETS.USDC_MAINNET;
 }
 
+// Soroban configuration
+export const SOROBAN = {
+  // RPC endpoints
+  RPC_TESTNET: 'https://soroban-testnet.stellar.org',
+  RPC_MAINNET: 'https://soroban.stellar.org',
+  
+  // Stock Trading Contract - Update this after deployment
+  STOCK_TRADING_CONTRACT: process.env.NEXT_PUBLIC_STOCK_TRADING_CONTRACT_ID || '',
+};
+
+export function getSorobanRpcUrl(): string {
+  return NETWORK.CURRENT === 'testnet'
+    ? SOROBAN.RPC_TESTNET
+    : SOROBAN.RPC_MAINNET;
+}
+
 
 export const config = {
   appName: BRAND.NAME,
@@ -197,6 +223,10 @@ export const config = {
     network: NETWORK.CURRENT,
     horizonUrl: getHorizonUrl(),
     usdcIssuer: getUSDCAsset().issuer,
+  },
+  soroban: {
+    rpcUrl: getSorobanRpcUrl(),
+    stockTradingContract: SOROBAN.STOCK_TRADING_CONTRACT,
   },
   supabase: {
     url: process.env.NEXT_PUBLIC_SUPABASE_URL!,

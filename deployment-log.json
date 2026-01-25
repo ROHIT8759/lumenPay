@@ -1,0 +1,47 @@
+{
+  "network": "testnet",
+  "deployedAt": "2026-01-25T02:10:23.076Z",
+  "deployer": "GCDMFNMAOKQKL5Z7RNED6IZM6ZGZMFLFFH3FCMBP3LCIYNM5AMSY5TEQ",
+  "contracts": {
+    "Escrow": {
+      "id": "CAMI56L4LTSBW7YTM4L7YBGQAHISMATKXI3NYISZ4U4XMZSC72L33CB2",
+      "envKey": "ESCROW_CONTRACT_ID",
+      "description": "Collateral escrow for loans"
+    },
+    "RWA": {
+      "id": "CCATPYSHII3BRZRMXOAUOFWPH5LECIKO245DHM7VGPDL476GQKB26IER",
+      "envKey": "RWA_CONTRACT_ID",
+      "description": "Real World Asset tokenization"
+    },
+    "Credit": {
+      "id": "CAGHZZG4J45KPFSRTX2PNOXC6FB7FEYIQ2JLVRAT64BRPNLVZHXXH46Q",
+      "envKey": "CREDIT_CONTRACT_ID",
+      "description": "Credit scoring contract"
+    },
+    "KYC": {
+      "id": "CCP2SZFHJLQS6L5MQSCIDZT7ELXIHEVAMXZA5TT2E4XX5FJ6X6KYGME2",
+      "envKey": "KYC_CONTRACT_ID",
+      "description": "KYC verification contract"
+    },
+    "Loan": {
+      "id": "CDVW547TOZI4LTABJ7QDMIVGMW5FBH6KZY4WGRAIYNY2LHFTI7TO2ZQK",
+      "envKey": "LOAN_CONTRACT_ID",
+      "description": "DeFi loan management"
+    },
+    "Payment": {
+      "id": "CAFBGR6L6EN5TBAJOP2XAFRI4HCJPXLXP6HDIIHQXXPYQ7PVJIIZBG7B",
+      "envKey": "PAYMENT_CONTRACT_ID",
+      "description": "Payment processing contract"
+    },
+    "FiatOfframp": {
+      "id": "CBUVWBCUO2K7QYEG4FSHMY2HZCFZLWDA73BULRO4ANNQGO6GCFZ2VE3X",
+      "envKey": "FIAT_OFFRAMP_CONTRACT_ID",
+      "description": "Fiat off-ramp (UPI/Bank)"
+    },
+    "StockTrading": {
+      "id": "CD4NVCXLTSNKVDSY2G4ICXPM2KWBF5DH6LLYE5HEKH4CFX7E3T342R3R",
+      "envKey": "STOCK_TRADING_CONTRACT_ID",
+      "description": "Stock trading contract"
+    }
+  }
+}

@@ -18,7 +18,10 @@ export interface WalletData {
 }
 
 
-const toHex = (buffer: ArrayBuffer) => Array.from(new Uint8Array(buffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+const toHex = (buffer: ArrayBuffer | Uint8Array) => {
+    const arr = buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer);
+    return Array.from(arr).map(b => b.toString(16).padStart(2, '0')).join('');
+};
 const fromHex = (hex: string) => new Uint8Array(hex.match(/.{1,2}/g)!.map(byte => parseInt(byte, 16)));
 
 async function deriveKey(passphrase: string, salt: Uint8Array): Promise<CryptoKey> {
@@ -34,7 +37,7 @@ async function deriveKey(passphrase: string, salt: Uint8Array): Promise<CryptoKe
     return window.crypto.subtle.deriveKey(
         {
             name: "PBKDF2",
-            salt: salt,
+            salt: salt as unknown as BufferSource,
             iterations: ITERATIONS,
             hash: "SHA-256"
         },

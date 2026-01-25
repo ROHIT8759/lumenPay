@@ -225,6 +225,11 @@ export const signingEngine = {
         signingEngine.instance.signTransaction(...args),
     signMessage: (...args: Parameters<SigningEngineService['signMessage']>) => 
         signingEngine.instance.signMessage(...args),
-    signWithSession: (...args: Parameters<SigningEngineService['signWithSession']>) => 
-        signingEngine.instance.signWithSession(...args),
+    verifyMessageSignature: (...args: Parameters<SigningEngineService['verifyMessageSignature']>) => 
+        signingEngine.instance.verifyMessageSignature(...args),
+    getTransactionDetails: (...args: Parameters<SigningEngineService['getTransactionDetails']>) => 
+        signingEngine.instance.getTransactionDetails(...args),
+    canSign: () => signingEngine.instance.canSign(),
+    signTransactionWithSession: (...args: Parameters<SigningEngineService['signTransactionWithSession']>) => 
+        signingEngine.instance.signTransactionWithSession(...args),
 };

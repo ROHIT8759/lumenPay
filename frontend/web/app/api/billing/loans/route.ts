@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase, isSupabaseConfigured } from '@/lib/supabaseClient';
-import { MOCK_LOANS } from '@/lib/mockData';
+import { supabase } from '@/lib/supabaseClient';
 
 export interface CollateralLoan {
   id: string;
@@ -47,23 +46,6 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
     const status = searchParams.get('status');
-
-    
-    if (!isSupabaseConfigured()) {
-      console.log('[DEMO MODE] Using mock loans data');
-      return NextResponse.json({
-        success: true,
-        loans: MOCK_LOANS,
-        summary: {
-          total_borrowed: 0,
-          total_outstanding: 0,
-          total_collateral_locked: 0,
-          average_health_factor: 0,
-          num_active_loans: 0,
-        },
-        demo: true,
-      });
-    }
 
     if (!userId) {
       return NextResponse.json({ error: 'User ID required' }, { status: 400 });

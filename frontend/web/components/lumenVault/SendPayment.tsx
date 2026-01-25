@@ -16,14 +16,14 @@ export function SendPayment({ onBack }: SendPaymentProps) {
     const { publicKey, balances, network } = useWallet();
     const [recipient, setRecipient] = useState('');
     const [amount, setAmount] = useState('');
-    const [asset, setAsset] = useState('XLM'); 
+    const [asset, setAsset] = useState('XLM');
     const [memo, setMemo] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [status, setStatus] = useState<'idle' | 'building' | 'confirming' | 'signing' | 'sending' | 'success' | 'error'>('idle');
     const [errorDetails, setErrorDetails] = useState('');
     const [txHash, setTxHash] = useState('');
 
-    
+
     const [pendingTx, setPendingTx] = useState<{ xdr: string, metadata: any } | null>(null);
 
     const handleBuildTx = async (e: React.FormEvent) => {
@@ -35,13 +35,13 @@ export function SendPayment({ onBack }: SendPaymentProps) {
         setErrorDetails('');
 
         try {
-            
+
             const buildResult = await transactionBuilder.buildPaymentTransaction({
                 sourcePublicKey: publicKey,
                 destinationPublicKey: recipient,
                 amount: amount,
                 assetCode: asset === 'XLM' ? undefined : asset,
-                assetIssuer: asset === 'USDC' ? 'GBUQWP3BOUZX34LOCALCOMMERCIAL' : undefined, 
+                assetIssuer: asset === 'USDC' ? 'GBUQWP3BOUZX34LOCALCOMMERCIAL' : undefined,
                 memo: memo || undefined,
             });
 
@@ -65,21 +65,21 @@ export function SendPayment({ onBack }: SendPaymentProps) {
         if (!pendingTx) return;
 
         setStatus('signing');
-        setIsLoading(true); 
+        setIsLoading(true);
 
         try {
-            
-            
-            
+
+
+
 
             const signedResult = await signingEngine.signTransactionWithSession(pendingTx.xdr, network);
 
             if (signedResult.error) {
-                
+
                 throw new Error(signedResult.error);
             }
 
-            
+
             setStatus('sending');
             const submitResult = await networkProvider.submitTransaction(signedResult.signedTransaction.signedXDR);
 
@@ -90,7 +90,7 @@ export function SendPayment({ onBack }: SendPaymentProps) {
             setTxHash(submitResult.hash);
             setStatus('success');
 
-            
+
             setTimeout(() => {
                 onBack();
             }, 3000);
@@ -128,7 +128,7 @@ export function SendPayment({ onBack }: SendPaymentProps) {
                 </div>
 
                 <form onSubmit={handleBuildTx} className="space-y-6 flex-1">
-                    {}
+                    { }
                     <div className="bg-gray-50 dark:bg-gray-800 p-6 rounded-2xl flex flex-col items-center justify-center">
                         <input
                             type="number"
@@ -151,7 +151,7 @@ export function SendPayment({ onBack }: SendPaymentProps) {
                         <p className="text-xs text-gray-500 mt-2">Available: {asset === 'XLM' ? balances.native : balances.usdc}</p>
                     </div>
 
-                    {}
+                    { }
                     <div className="space-y-2">
                         <label className="text-xs font-semibold uppercase text-gray-500">To</label>
                         <input
@@ -163,7 +163,7 @@ export function SendPayment({ onBack }: SendPaymentProps) {
                         />
                     </div>
 
-                    {}
+                    { }
                     <div className="space-y-2">
                         <label className="text-xs font-semibold uppercase text-gray-500">Memo (Optional)</label>
                         <input
@@ -199,7 +199,7 @@ export function SendPayment({ onBack }: SendPaymentProps) {
                 </form>
             </div>
 
-            {}
+            { }
             {status === 'confirming' && pendingTx && (
                 <ApprovalModal
                     isOpen={true}
@@ -216,7 +216,7 @@ export function SendPayment({ onBack }: SendPaymentProps) {
                         setStatus('idle');
                         setPendingTx(null);
                     }}
-                    isProcessing={isLoading && status === 'signing'}
+                    isProcessing={isLoading}
                 />
             )}
         </>

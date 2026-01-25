@@ -11,7 +11,7 @@ import {
     MemoType,
     Account,
     Contract,
-    SorobanRpc,
+    rpc,
     xdr,
 } from '@stellar/stellar-sdk';
 
@@ -231,23 +231,27 @@ class TransactionBuilderService {
     }
 
     
-    parseTransactionXDR(xdr: string): {
+    parseTransactionXDR(xdrString: string): {
         source: string;
         operations: any[];
         fee: string;
         memo?: string;
     } | null {
         try {
-            const transaction = TransactionBuilder.fromXDR(xdr, this.networkPassphrase);
+            const transaction = TransactionBuilder.fromXDR(xdrString, this.networkPassphrase);
+
+            // Handle both Transaction and FeeBumpTransaction
+            const tx = transaction as any;
+            const innerTx = tx.innerTransaction || tx;
 
             return {
-                source: transaction.source,
-                operations: transaction.operations.map((op: any) => ({
+                source: innerTx.source || tx.feeSource || '',
+                operations: innerTx.operations?.map((op: any) => ({
                     type: op.type,
                     ...op,
-                })),
-                fee: transaction.fee,
-                memo: transaction.memo ? transaction.memo.value?.toString() : undefined,
+                })) || [],
+                fee: String(tx.fee),
+                memo: innerTx.memo ? innerTx.memo.value?.toString() : undefined,
             };
         } catch (error) {
             console.error('Failed to parse transaction XDR:', error);
@@ -271,8 +275,10 @@ export const transactionBuilder = {
     switchNetwork: (network: NetworkType) => transactionBuilder.instance.switchNetwork(network),
     buildPaymentTransaction: (...args: Parameters<TransactionBuilderService['buildPaymentTransaction']>) => 
         transactionBuilder.instance.buildPaymentTransaction(...args),
-    buildSorobanContractCall: (...args: Parameters<TransactionBuilderService['buildSorobanContractCall']>) => 
-        transactionBuilder.instance.buildSorobanContractCall(...args),
+    buildContractCallTransaction: (...args: Parameters<TransactionBuilderService['buildContractCallTransaction']>) => 
+        transactionBuilder.instance.buildContractCallTransaction(...args),
+    estimateFee: (operationCount?: number) => transactionBuilder.instance.estimateFee(operationCount),
+    validateAddress: (address: string) => transactionBuilder.instance.validateAddress(address),
     parseTransactionXDR: (...args: Parameters<TransactionBuilderService['parseTransactionXDR']>) => 
         transactionBuilder.instance.parseTransactionXDR(...args),
 };

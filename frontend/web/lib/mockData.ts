@@ -27,7 +27,7 @@ export const MOCK_USER_HOLDINGS = [
 
 export const MOCK_KYC_STATUS = {
   status: 'pending',
-  verification_level: 'basic',
+  verification_level: 1,
   verified_at: null,
   expires_at: null,
   documents_submitted: ['passport', 'address_proof'],

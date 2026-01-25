@@ -2,13 +2,14 @@
 
 import React from 'react';
 import { cn } from '@/lib/utils';
-import { motion, HTMLMotionProps } from 'framer-motion';
+import { motion } from 'framer-motion';
 
-interface GlassCardProps extends HTMLMotionProps<"div"> {
+interface GlassCardProps {
     children: React.ReactNode;
     className?: string;
     hoverEffect?: boolean;
     activeEffect?: boolean;
+    onClick?: () => void;
 }
 
 export default function GlassCard({
@@ -16,7 +17,7 @@ export default function GlassCard({
     className,
     hoverEffect = false,
     activeEffect = true,
-    ...props
+    onClick,
 }: GlassCardProps) {
     return (
         <motion.div
@@ -34,12 +35,12 @@ export default function GlassCard({
             } : undefined}
             whileTap={activeEffect && hoverEffect ? { scale: 0.98 } : undefined}
             transition={{ type: "spring", stiffness: 400, damping: 25 }}
-            {...props}
+            onClick={onClick}
         >
-            {}
+            { }
             <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-transparent opacity-50 pointer-events-none" />
 
-            {}
+            { }
             {hoverEffect && (
                 <motion.div
                     className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -skew-x-12 translate-x-[-100%]"

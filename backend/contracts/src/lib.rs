@@ -17,3 +17,12 @@
 
 // Active module: Escrow for secure transactions
 pub mod escrow;
+
+// Active module: Real World Asset (RWA) tokenization
+pub mod rwa;
+
+// Test modules
+#[cfg(test)]
+mod escrow_tests;
+#[cfg(test)]
+mod rwa_tests;

@@ -163,7 +163,7 @@ function StepCard({ step, title, desc }: { step: string, title: string, desc: st
 function FeatureDetails({ icon, title, desc }: { icon: React.ReactNode, title: string, desc: string }) {
     return (
         <div className="p-6 rounded-xl bg-white/5 border border-white/5 hover:border-white/20 transition-all">
-            <div className="text-blue-400 mb-4">{React.cloneElement(icon as React.ReactElement, { size: 32 })}</div>
+            <div className="text-blue-400 mb-4">{React.cloneElement(icon as React.ReactElement<{ size?: number }>, { size: 32 })}</div>
             <h3 className="text-lg font-bold mb-2">{title}</h3>
             <p className="text-sm text-gray-400">{desc}</p>
         </div>

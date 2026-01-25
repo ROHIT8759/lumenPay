@@ -51,7 +51,11 @@ export function SmartContractInterface({ onBack }: { onBack: () => void }) {
     const updateParam = (index: number, field: keyof ContractParam, val: string) => {
         const newParams = [...params];
 
-        newParams[index][field] = val;
+        if (field === 'type') {
+            newParams[index][field] = val as ParamType;
+        } else {
+            newParams[index][field] = val;
+        }
         setParams(newParams);
     };
 
