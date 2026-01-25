@@ -1,13 +1,5 @@
-
-
-
-
-
-
-
-use soroban_sdk::{
+﻿use soroban_sdk::{
     contract, contractimpl, contracttype, Env, Address, String, token, Symbol,
-    vec, Vec, symbol_short, Bytes,
 };
 
 #[contract]
@@ -26,13 +18,6 @@ pub struct PaymentRecord {
 
 #[contractimpl]
 impl PaymentContract {
-    
-    
-    
-    
-    
-    
-    
     pub fn pay(
         env: Env,
         token: Address,
@@ -40,21 +25,15 @@ impl PaymentContract {
         to: Address,
         amount: i128,
     ) -> bool {
-        
         from.require_auth();
 
-        
         if amount <= 0 {
             return false;
         }
 
-        
         let client = token::Client::new(&env, &token);
-        
-        
         client.transfer(&from, &to, &amount);
-        
-        
+
         env.events().publish(
             (Symbol::new(&env, "payment"),),
             (from.clone(), to.clone(), amount),
@@ -63,7 +42,6 @@ impl PaymentContract {
         true
     }
 
-    
     pub fn batch_pay(
         env: Env,
         token: Address,
@@ -78,13 +56,11 @@ impl PaymentContract {
         }
 
         let client = token::Client::new(&env, &token);
-        
+
         for i in 0..recipients.len() {
-            if let (Some(to), Some(amount)) = (recipients.get(i), amounts.get(i)) {
-                if let (Ok(to_addr), Ok(amt)) = (to, amount) {
-                    if amt > 0 {
-                        client.transfer(&from, &to_addr, &amt);
-                    }
+            if let (Some(to), Some(amt)) = (recipients.get(i), amounts.get(i)) {
+                if amt > 0 {
+                    client.transfer(&from, &to, &amt);
                 }
             }
         }
@@ -96,53 +72,19 @@ impl PaymentContract {
 
         true
     }
-
-    
-    pub fn get_balance(env: Env, token: Address, account: Address) -> i128 {
-        let client = token::Client::new(&env, &token);
-        client.balance(&account)
-    }
-
-    
-    pub fn pay_with_memo(
-        env: Env,
-        token: Address,
-        from: Address,
-        to: Address,
-        amount: i128,
-        memo: String,
-    ) -> bool {
-        from.require_auth();
-
-        if amount <= 0 {
-            return false;
-        }
-
-        let client = token::Client::new(&env, &token);
-        client.transfer(&from, &to, &amount);
-
-        env.events().publish(
-            (Symbol::new(&env, "payment_memo"),),
-            (from, to, amount, memo),
-        );
-
-        true
-    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use soroban_sdk::testutils::{Address as _, Env as _};
+    use soroban_sdk::{Env, testutils::Address as _};
 
     #[test]
     fn test_payment() {
         let env = Env::default();
-        let from = Address::random(&env);
-        let to = Address::random(&env);
-        let token = Address::random(&env);
+        let contract_id = env.register_contract(None, PaymentContract);
+        let _client = PaymentContractClient::new(&env, &contract_id);
 
-        
-        
+        // Test implementation would go here
     }
 }

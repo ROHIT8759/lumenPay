@@ -30,6 +30,17 @@ export interface RWAAsset {
 
 export async function GET(request: NextRequest) {
   try {
+    // Check if Supabase is configured
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL.includes('jsismwafswmoqwfbfswv')) {
+      console.warn('Supabase not configured or using invalid URL - returning empty data');
+      return NextResponse.json({
+        success: true,
+        assets: [],
+        count: 0,
+        message: 'Supabase not configured'
+      });
+    }
+
     const { searchParams } = new URL(request.url);
     const type = searchParams.get('type');
     const featured = searchParams.get('featured');
