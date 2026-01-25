@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase, isSupabaseConfigured } from '@/lib/supabaseClient';
-import { MOCK_RWA_ASSETS } from '@/lib/mockData';
 
 export interface RWAAsset {
   id: string;
@@ -38,33 +37,14 @@ export async function GET(request: NextRequest) {
     const minYield = searchParams.get('minYield');
     const kycLevel = searchParams.get('kycLevel');
 
+    // Require database configuration for production
     if (!isSupabaseConfigured()) {
-      let assets = [...MOCK_RWA_ASSETS];
-
-      if (type) {
-        assets = assets.filter(a => a.asset_type === type);
-      }
-      if (featured === 'true') {
-        assets = assets.filter(a => a.is_featured);
-      }
-      if (riskLevel) {
-        assets = assets.filter(a => a.risk_level === riskLevel);
-      }
-      if (minYield) {
-        const minYieldValue = parseFloat(minYield);
-        assets = assets.filter(a => a.annual_yield_percent >= minYieldValue);
-      }
-      if (kycLevel) {
-        const parsedKyc = parseInt(kycLevel, 10);
-        assets = assets.filter(a => a.min_kyc_level <= parsedKyc);
-      }
-
       return NextResponse.json({
-        success: true,
-        assets,
-        count: assets.length,
-        demo: true,
-      });
+        success: false,
+        error: 'Database not configured. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY.',
+        assets: [],
+        count: 0,
+      }, { status: 503 });
     }
 
     let query = supabase
@@ -128,17 +108,10 @@ export async function POST(request: NextRequest) {
     }
 
     if (!isSupabaseConfigured()) {
-      const asset = MOCK_RWA_ASSETS.find(a => a.id === assetId);
-
-      if (!asset) {
-        return NextResponse.json({ error: 'Asset not found' }, { status: 404 });
-      }
-
       return NextResponse.json({
-        success: true,
-        asset,
-        demo: true,
-      });
+        success: false,
+        error: 'Database not configured. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY.',
+      }, { status: 503 });
     }
 
     const { data, error } = await supabase

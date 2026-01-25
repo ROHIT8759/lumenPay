@@ -402,20 +402,23 @@ export default function Home() {
         </Link>
       </motion.section>
 
-      {/* 6. Balance Card */}
-      <motion.section variants={item} className="pb-8">
-        <GlassCard className="bg-linear-to-br from-blue-900/40 to-black border-blue-500/20">
-          <div className="flex justify-between items-start mb-4">
-            <div>
-              <h2 className="text-xs sm:text-sm text-gray-300 mb-0.5 sm:mb-1">Total Balance</h2>
-              <div className="text-2xl sm:text-3xl font-bold font-mono tracking-tight">$12,450.00 <span className="text-[10px] sm:text-sm text-gray-500 font-sans">USDC</span></div>
+
+      {/* Wallet Balances - Dynamic from LumenVault */}
+      {publicKey && !isLocked && balances.length > 0 && (
+        <motion.section variants={item} className="pb-8">
+          <GlassCard className="bg-linear-to-br from-blue-900/40 to-black border-blue-500/20">
+            <div className="flex justify-between items-start mb-4">
+              <div>
+                <h2 className="text-xs sm:text-sm text-gray-300 mb-0.5 sm:mb-1">On-Chain Balances</h2>
+                <div className="text-2xl sm:text-3xl font-bold font-mono tracking-tight">
+                  {totalUsdBalance.toLocaleString('en-US', { style: 'currency', currency: 'USD' })}
+                </div>
+              </div>
+              <div className="p-2 bg-blue-500 rounded-lg">
+                <Banknote className="text-white" size={20} />
+              </div>
             </div>
-            <div className="p-2 bg-blue-500 rounded-lg">
-              <Banknote className="text-white" size={20} />
-            </div>
-          </div>
-          {/* Balance breakdown */}
-          {publicKey && !isLocked && balances.length > 0 && (
+            {/* Balance breakdown */}
             <div className="mb-3 space-y-1 max-h-20 overflow-y-auto">
               {balances.map((bal, idx) => (
                 <div key={idx} className="flex justify-between text-xs text-gray-400">
@@ -424,13 +427,23 @@ export default function Home() {
                 </div>
               ))}
             </div>
-          )}
-          <div className="flex gap-2">
-            <button className="flex-1 py-2 sm:py-2.5 bg-blue-600 hover:bg-blue-500 rounded-lg text-xs sm:text-sm font-medium transition-colors active:scale-95">Add Money</button>
-            <button className="flex-1 py-2 sm:py-2.5 bg-white/10 hover:bg-white/20 rounded-lg text-xs sm:text-sm font-medium transition-colors active:scale-95">Withdraw</button>
-          </div>
-        </GlassCard>
-      </motion.section>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setShowAddMoneyModal(true)}
+                className="flex-1 py-2 sm:py-2.5 bg-blue-600 hover:bg-blue-500 rounded-lg text-xs sm:text-sm font-medium transition-colors active:scale-95"
+              >
+                Add Money
+              </button>
+              <button
+                onClick={() => setShowWithdrawModal(true)}
+                className="flex-1 py-2 sm:py-2.5 bg-white/10 hover:bg-white/20 rounded-lg text-xs sm:text-sm font-medium transition-colors active:scale-95"
+              >
+                Withdraw
+              </button>
+            </div>
+          </GlassCard>
+        </motion.section>
+      )}
 
       {/* Modals */}
       <QRScannerModal isOpen={showQRScanner} onClose={() => setShowQRScanner(false)} />

@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase, isSupabaseConfigured } from '@/lib/supabaseClient';
-import { MOCK_KYC_STATUS } from '@/lib/mockData';
 
 export interface KYCStatus {
   id: string;
@@ -26,24 +25,14 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'User ID required' }, { status: 400 });
     }
 
-    
+    // Require database configuration for production
     if (!isSupabaseConfigured()) {
-      console.log('[DEMO MODE] Using mock KYC status');
-      const kycStatus = { ...MOCK_KYC_STATUS, user_id: userId };
-      
-      const benefits = {
-        max_transaction_limit: kycStatus.verification_level === 0 ? 500 : kycStatus.verification_level === 1 ? 5000 : null,
-        max_loan_limit: kycStatus.verification_level === 0 ? 0 : kycStatus.verification_level === 1 ? 10000 : null,
-        can_access_rwa: kycStatus.verification_level >= 1,
-        can_access_flash_loans: kycStatus.verification_level >= 2,
-      };
-
       return NextResponse.json({
-        success: true,
-        kyc_status: kycStatus,
-        benefits,
-        demo: true,
-      });
+        success: false,
+        error: 'Database not configured. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY.',
+        kyc_status: null,
+        benefits: null,
+      }, { status: 503 });
     }
 
     const { data, error } = await supabase

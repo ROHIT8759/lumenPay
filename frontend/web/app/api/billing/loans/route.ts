@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase, isSupabaseConfigured } from '@/lib/supabaseClient';
-import { MOCK_LOANS } from '@/lib/mockData';
 
 export interface CollateralLoan {
   id: string;
@@ -48,12 +47,12 @@ export async function GET(request: NextRequest) {
     const userId = searchParams.get('userId');
     const status = searchParams.get('status');
 
-    
+    // Require database configuration for production
     if (!isSupabaseConfigured()) {
-      console.log('[DEMO MODE] Using mock loans data');
       return NextResponse.json({
-        success: true,
-        loans: MOCK_LOANS,
+        success: false,
+        error: 'Database not configured. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY.',
+        loans: [],
         summary: {
           total_borrowed: 0,
           total_outstanding: 0,
@@ -61,8 +60,7 @@ export async function GET(request: NextRequest) {
           average_health_factor: 0,
           num_active_loans: 0,
         },
-        demo: true,
-      });
+      }, { status: 503 });
     }
 
     if (!userId) {
