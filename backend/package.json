@@ -8,7 +8,9 @@
         "build": "tsc",
         "start": "node -r dotenv/config dist/server.js",
         "start:indexer": "node -r dotenv/config dist/workers/indexer.js",
-        "indexer": "tsx watch workers/indexer.ts"
+        "indexer": "tsx watch workers/indexer.ts",
+        "migrate": "prisma migrate deploy",
+        "studio": "prisma studio"
     },
     "dependencies": {
         "@prisma/client": "5.10.0",
