@@ -7,6 +7,8 @@ import { createWalletData, isValidSecretKey, importKeypair } from '@/lib/lumenVa
 import { secureStorage } from '@/lib/lumenVault/secureStorage';
 import { useWallet } from './WalletProvider';
 import { Eye, EyeOff, Loader2, AlertCircle, KeyRound } from 'lucide-react';
+import { walletAuth } from '@/lib/lumenVault/walletAuth';
+import { setUnlockedKeypair } from '@/lib/lumenVault/keyCache';
 
 export function ImportWallet() {
     const { refreshState } = useWallet();
@@ -56,6 +58,16 @@ export function ImportWallet() {
 
             
             await secureStorage.storeSession(keypair.publicKey());
+
+            const session = await secureStorage.getSession();
+            if (session) {
+                setUnlockedKeypair(keypair.publicKey(), keypair, session.expiresAt);
+            }
+
+            const authResult = await walletAuth.signIn(walletData, passphrase);
+            if (!authResult.success) {
+                throw new Error(authResult.error || 'Authentication failed');
+            }
 
             
             await refreshState();

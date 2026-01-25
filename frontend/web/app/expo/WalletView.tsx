@@ -11,7 +11,7 @@ import {
     shortenAddress,
     StellarNetwork,
 } from '@/lib/horizonService';
-import { useWallet } from '@/hooks/useWallet';
+import { useWallet as useWalletContext } from '@/components/lumenVault/WalletProvider';
 
 interface WalletViewProps {
     address: string;
@@ -21,14 +21,14 @@ interface WalletViewProps {
 }
 
 export default function WalletView({ address, onClose, onTransactionClick, network = 'mainnet' }: WalletViewProps) {
-    const { address: userAddress } = useWallet();
+    const { publicKey } = useWalletContext();
     const [account, setAccount] = useState<ExpoAccount | null>(null);
     const [transactions, setTransactions] = useState<ExpoTransaction[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [copied, setCopied] = useState(false);
 
-    const isOwnWallet = userAddress && userAddress.toLowerCase() === address.toLowerCase();
+    const isOwnWallet = publicKey && publicKey.toLowerCase() === address.toLowerCase();
 
     useEffect(() => {
         loadWallet();

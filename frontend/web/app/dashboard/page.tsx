@@ -13,7 +13,7 @@ import {
   CryptoTradingModal,
   ActionBtn,
 } from '@/components/quick-actions/QuickActionsModals';
-import { useLumenVault } from '@/hooks/useLumenVault';
+import { useWallet as useWalletContext } from '@/components/lumenVault/WalletProvider';
 import { fetchAccountByAddress, StellarNetwork } from '@/lib/horizonService';
 
 interface Person {
@@ -59,26 +59,19 @@ export default function Home() {
   const [showAddMoneyModal, setShowAddMoneyModal] = useState(false);
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
   const [people, setPeople] = useState<Person[]>([]);
-  const [peopleLoading, setPeopleLoading] = useState(true);
+  const [peopleLoading, setPeopleLoading] = useState(false);
   const [balances, setBalances] = useState<Balance[]>([]);
   const [totalUsdBalance, setTotalUsdBalance] = useState(0);
   const [balanceLoading, setBalanceLoading] = useState(true);
-  const [balance, setBalance] = useState<any>(null);
 
-  // Wallet state from LumenVault
-  const [walletState] = useLumenVault();
-  const { publicKey, isLocked } = walletState;
-
-  useEffect(() => {
-    fetchData();
-  }, []);
+  const { publicKey, isUnlocked } = useWalletContext();
 
   // Fetch balance when wallet is connected
   useEffect(() => {
-    if (publicKey && !isLocked) {
+    if (publicKey && isUnlocked) {
       fetchBalance();
     }
-  }, [publicKey, isLocked]);
+  }, [publicKey, isUnlocked]);
 
   const fetchBalance = async () => {
     if (!publicKey) return;
@@ -122,45 +115,8 @@ export default function Home() {
     }
   };
 
-  const fetchData = async () => {
-    try {
-      const userId = localStorage.getItem('userId');
-      if (!userId) {
-        setPeopleLoading(false);
-        setBalanceLoading(false);
-        return;
-      }
-
-      // Fetch People
-      fetch('/api/people?limit=7', {
-        headers: { 'x-user-id': userId },
-      })
-        .then(res => res.json())
-        .then(data => setPeople(data.people || []))
-        .catch(err => console.error('Error fetching people:', err))
-        .finally(() => setPeopleLoading(false));
-
-      // Fetch Wallet & Balance
-      const walletRes = await fetch('/api/wallet', {
-        headers: { 'x-user-id': userId },
-      });
-
-      if (walletRes.ok) {
-        const walletData = await walletRes.json();
-        if (walletData.publicKey) {
-          const balanceRes = await fetch(`/api/wallet/balance?publicKey=${walletData.publicKey}`);
-          if (balanceRes.ok) {
-            const balanceData = await balanceRes.json();
-            setBalance(balanceData);
-          }
-        }
-      }
-    } catch (err) {
-      console.error('Error fetching dashboard data:', err);
-    } finally {
-      setBalanceLoading(false);
-    }
-  };
+  const nativeBalance = balances.find(b => b.asset === 'XLM')?.balance ?? '0';
+  const usdcBalance = balances.find(b => b.asset === 'USDC')?.balance ?? '0';
 
   return (
     <motion.div
@@ -210,13 +166,13 @@ export default function Home() {
                 <div className="h-10 w-40 bg-gray-800 animate-pulse rounded" />
               ) : (
                 <div className="text-3xl font-bold font-mono tracking-tight">
-                  {parseFloat(balance?.usdc || '0').toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  {parseFloat(usdcBalance).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   <span className="text-sm text-gray-500 font-sans ml-2">USDC</span>
                 </div>
               )}
               {!balanceLoading && (
                 <div className="text-xs text-gray-400 mt-1">
-                  + {parseFloat(balance?.native || '0').toFixed(2)} XLM
+                  + {parseFloat(nativeBalance).toFixed(2)} XLM
                 </div>
               )}
             </div>
@@ -404,7 +360,7 @@ export default function Home() {
 
 
       {/* Wallet Balances - Dynamic from LumenVault */}
-      {publicKey && !isLocked && balances.length > 0 && (
+      {publicKey && balances.length > 0 && (
         <motion.section variants={item} className="pb-8">
           <GlassCard className="bg-linear-to-br from-blue-900/40 to-black border-blue-500/20">
             <div className="flex justify-between items-start mb-4">

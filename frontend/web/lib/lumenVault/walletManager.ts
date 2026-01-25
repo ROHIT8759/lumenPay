@@ -130,9 +130,9 @@ class WalletManager {
      */
     async getPublicKey(): Promise<string | null> {
         try {
-            const session = await secureStorage.getActiveSession();
-            return session;Session('active');
-            return session?.publicKey || null
+            const session = await secureStorage.getSession();
+            return session?.publicKey || null;
+        } catch {
             return null;
         }
     }

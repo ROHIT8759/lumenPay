@@ -7,6 +7,7 @@ import {
 } from '@stellar/stellar-sdk';
 import { getKeypairFromWallet, WalletData } from './keyManager';
 import { secureStorage } from './secureStorage';
+import { getUnlockedKeypair } from './keyCache';
 
 export interface SignTransactionParams {
     xdr: string;
@@ -188,16 +189,21 @@ class SigningEngineService {
                 throw new Error('No active session - wallet is locked');
             }
 
-
-            const walletData = await secureStorage.getWallet(session.publicKey);
-            if (!walletData) {
-                throw new Error('Wallet not found');
+            const keypair = getUnlockedKeypair(session.publicKey);
+            if (!keypair) {
+                throw new Error('Wallet locked - unlock required');
             }
 
+            const networkPassphrase = network === 'testnet' ? Networks.TESTNET : Networks.PUBLIC;
+            const transaction = new Transaction(xdr, networkPassphrase);
+            transaction.sign(keypair);
 
-
-
-            throw new Error('Session-based signing requires passphrase');
+            return {
+                signedTransaction: {
+                    signedXDR: transaction.toXDR(),
+                    hash: transaction.hash().toString('hex'),
+                },
+            };
         } catch (error: unknown) {
             return {
                 signedTransaction: {

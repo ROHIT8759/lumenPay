@@ -34,7 +34,7 @@ router.get('/nonce', async (req: Request, res: Response) => {
 
         res.json({
             nonce: nonceData.nonce,
-            expiresAt: nonceData.expiresAt,
+            expiresAt: nonceData.expiresAt.getTime(),
             message: nonceData.nonce,
         });
     } catch (error: any) {

@@ -13,6 +13,7 @@ import {
     transactionBuilder
 } from '@/lib/lumenVault';
 import { WalletData, getKeypairFromWallet } from '@/lib/lumenVault/keyManager';
+import { clearUnlockedKeypair, setUnlockedKeypair } from '@/lib/lumenVault/keyCache';
 
 interface WalletContextType {
 
@@ -128,6 +129,7 @@ export function WalletProvider({ children }: WalletProviderProps) {
 
     const lockWallet = async () => {
         await secureStorage.clearSession();
+        clearUnlockedKeypair();
         setIsUnlocked(false);
         setPublicKey(null);
         setBalances({ native: '0', usdc: '0', assets: [] });
@@ -146,6 +148,8 @@ export function WalletProvider({ children }: WalletProviderProps) {
             const walletData = await secureStorage.getWallet(walletId);
             if (!walletData) return { success: false, error: 'Wallet data not found' };
 
+            const keypair = await getKeypairFromWallet(walletData, passphrase);
+
             try {
                 // Verify passphrase and sign in to backend
                 const authResult = await walletAuth.signIn(walletData, passphrase);
@@ -158,6 +162,11 @@ export function WalletProvider({ children }: WalletProviderProps) {
 
 
             await secureStorage.storeSession(walletData.publicKey);
+
+            const session = await secureStorage.getSession();
+            if (session) {
+                setUnlockedKeypair(walletData.publicKey, keypair, session.expiresAt);
+            }
 
             setIsUnlocked(true);
             setPublicKey(walletData.publicKey);

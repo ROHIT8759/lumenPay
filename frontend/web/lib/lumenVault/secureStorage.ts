@@ -2,6 +2,7 @@
 
 import { openDB, DBSchema, IDBPDatabase } from 'idb';
 import { WalletData } from './keyManager';
+import { clearUnlockedKeypair } from './keyCache';
 
 interface LumenVaultDB extends DBSchema {
     wallets: {
@@ -150,6 +151,7 @@ class SecureStorage {
         if (!this.db) throw new Error('Database not initialized');
 
         await this.db.delete('session', 'active');
+        clearUnlockedKeypair();
         this.clearAutoLock();
     }
 

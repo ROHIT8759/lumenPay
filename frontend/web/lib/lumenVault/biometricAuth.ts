@@ -1,6 +1,5 @@
 
 
-import { createHash } from 'crypto';
 import { mobileStorage } from './mobileStorage';
 
 
@@ -10,24 +9,12 @@ export type BiometricType =
     | 'iris'
     | 'none';
 
+// Check if we're in a web environment
+const isWeb = typeof window !== 'undefined' && !('ReactNativeWebView' in window);
 
-// We use a type-safe way to load expo-local-authentication
+// Biometric auth is not available on web - never load expo modules
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-let LocalAuthentication: any = null;
-
-async function loadLocalAuth() {
-    if (typeof window !== 'undefined' && (window as { expo?: unknown }).expo) {
-        try {
-            // @ts-ignore - expo-local-authentication is only available in Expo/React Native
-            LocalAuthentication = await import('expo-local-authentication');
-        } catch {
-            // Module not available
-        }
-    }
-}
-
-// Trigger initial load
-loadLocalAuth();
+const LocalAuthentication: any = null;
 
 class BiometricAuthService {
 
@@ -35,51 +22,11 @@ class BiometricAuthService {
         available: boolean;
         biometricType: BiometricType;
     }> {
-        if (!LocalAuthentication) {
-            return {
-                available: false,
-                biometricType: 'none',
-            };
-        }
-
-        try {
-            const compatible = await LocalAuthentication.hasHardwareAsync();
-            if (!compatible) {
-                return {
-                    available: false,
-                    biometricType: 'none',
-                };
-            }
-
-            const enrolled = await LocalAuthentication.isEnrolledAsync();
-            if (!enrolled) {
-                return {
-                    available: false,
-                    biometricType: 'none',
-                };
-            }
-
-            const types = await LocalAuthentication.supportedAuthenticationTypesAsync();
-
-
-            let biometricType: BiometricType = 'fingerprint';
-            if (types.includes(LocalAuthentication.AuthenticationType.FACIAL_RECOGNITION)) {
-                biometricType = 'face';
-            } else if (types.includes(LocalAuthentication.AuthenticationType.IRIS)) {
-                biometricType = 'iris';
-            }
-
-            return {
-                available: true,
-                biometricType,
-            };
-        } catch (error) {
-            console.error('Biometric check failed:', error);
-            return {
-                available: false,
-                biometricType: 'none',
-            };
-        }
+        // Biometrics not available on web
+        return {
+            available: false,
+            biometricType: 'none',
+        };
     }
 
 
@@ -87,30 +34,10 @@ class BiometricAuthService {
         success: boolean;
         error?: string;
     }> {
-        if (!LocalAuthentication) {
-            return {
-                success: false,
-                error: 'Biometric authentication not available',
-            };
-        }
-
-        try {
-            const result = await LocalAuthentication.authenticateAsync({
-                promptMessage: reason,
-                fallbackLabel: 'Use PIN',
-                disableDeviceFallback: false,
-            });
-
-            return {
-                success: result.success,
-                error: result.error,
-            };
-        } catch (error: unknown) {
-            return {
-                success: false,
-                error: error instanceof Error ? error.message : 'Authentication failed',
-            };
-        }
+        return {
+            success: false,
+            error: 'Biometric authentication not available on web',
+        };
     }
 
 
@@ -118,25 +45,10 @@ class BiometricAuthService {
         success: boolean;
         error?: string;
     }> {
-
-        const { available } = await this.isAvailable();
-        if (!available) {
-            return {
-                success: false,
-                error: 'Biometric authentication not available on this device',
-            };
-        }
-
-
-        const authResult = await this.authenticate('Enable biometric unlock');
-        if (!authResult.success) {
-            return authResult;
-        }
-
-
-        await mobileStorage.setBiometricEnabled(true);
-
-        return { success: true };
+        return {
+            success: false,
+            error: 'Biometric authentication not available on web',
+        };
     }
 
 
@@ -154,17 +66,13 @@ class PINAuthService {
     private readonly PIN_LENGTH = 6;
 
 
-    private hashPIN(pin: string): string {
-
-        if (typeof window !== 'undefined' && !createHash) {
-
-            return btoa(pin + '_salt_lumenvault');
-        }
-
-
-        return createHash('sha256')
-            .update(pin + '_salt_lumenvault')
-            .digest('hex');
+    private async hashPIN(pin: string): Promise<string> {
+        // Always use Web Crypto API (available in both browser and Node 15+)
+        const encoder = new TextEncoder();
+        const data = encoder.encode(pin + '_salt_lumenvault');
+        const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
     }
 
 
@@ -188,7 +96,7 @@ class PINAuthService {
         }
 
 
-        const hash = this.hashPIN(pin);
+        const hash = await this.hashPIN(pin);
         await mobileStorage.storePINHash(hash);
 
         return { success: true };
@@ -208,7 +116,7 @@ class PINAuthService {
             };
         }
 
-        const inputHash = this.hashPIN(pin);
+        const inputHash = await this.hashPIN(pin);
 
         if (inputHash === storedHash) {
             return { success: true };

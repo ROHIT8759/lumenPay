@@ -1,37 +1,26 @@
-
-
 import { secureStorage as browserStorage } from './secureStorage';
 import { WalletData } from './keyManager';
-
 
 interface SecureStoreOptions {
     keychainAccessible?: number;
     requireAuthentication?: boolean;
 }
 
-
-let SecureStore: any = null;
-
-
-if (typeof window !== 'undefined' && (window as any).expo) {
-    try {
-        SecureStore = require('expo-secure-store');
-    } catch {
-        
-    }
-}
+// SecureStore is only available on React Native/Expo, not on web
+const SecureStore: any = null;
 
 class MobileStorage {
     private readonly PREFIX = 'lumenvault_';
-    private isExpoEnvironment: boolean;
+    private isExpoEnvironment: boolean = false;
 
     constructor() {
-        this.isExpoEnvironment = !!SecureStore;
+        // Web environment - always use browser storage
+        this.isExpoEnvironment = false;
     }
 
     
     isMobile(): boolean {
-        return this.isExpoEnvironment;
+        return false; // Always false on web
     }
 
     
@@ -40,106 +29,50 @@ class MobileStorage {
         walletData: WalletData,
         requireAuth: boolean = true
     ): Promise<void> {
-        if (!this.isExpoEnvironment) {
-            
-            return browserStorage.storeWallet(id, walletData);
-        }
-
-        const key = `${this.PREFIX}wallet_${id}`;
-        const value = JSON.stringify({
-            walletData,
-            lastUnlocked: Date.now(),
-        });
-
-        const options: SecureStoreOptions = {
-            requireAuthentication: requireAuth,
-        };
-
-        await SecureStore.setItemAsync(key, value, options);
+        // Always use browser storage on web
+        return browserStorage.storeWallet(id, walletData);
     }
 
-    
     async getWalletMobile(id: string): Promise<WalletData | null> {
-        if (!this.isExpoEnvironment) {
-            return browserStorage.getWallet(id);
-        }
-
-        const key = `${this.PREFIX}wallet_${id}`;
-        const value = await SecureStore.getItemAsync(key);
-
-        if (!value) return null;
-
-        try {
-            const parsed = JSON.parse(value);
-            return parsed.walletData;
-        } catch {
-            return null;
-        }
+        return browserStorage.getWallet(id);
     }
 
     
     async deleteWalletMobile(id: string): Promise<void> {
-        if (!this.isExpoEnvironment) {
-            return browserStorage.deleteWallet(id);
-        }
-
-        const key = `${this.PREFIX}wallet_${id}`;
-        await SecureStore.deleteItemAsync(key);
+        return browserStorage.deleteWallet(id);
     }
 
     
     async storePINHash(hash: string): Promise<void> {
-        if (!this.isExpoEnvironment) {
-            
-            if (typeof window !== 'undefined') {
-                localStorage.setItem(`${this.PREFIX}pin_hash`, hash);
-            }
-            return;
+        if (typeof window !== 'undefined') {
+            localStorage.setItem(`${this.PREFIX}pin_hash`, hash);
         }
-
-        await SecureStore.setItemAsync(`${this.PREFIX}pin_hash`, hash);
     }
 
     
     async getPINHash(): Promise<string | null> {
-        if (!this.isExpoEnvironment) {
-            if (typeof window !== 'undefined') {
-                return localStorage.getItem(`${this.PREFIX}pin_hash`);
-            }
-            return null;
+        if (typeof window !== 'undefined') {
+            return localStorage.getItem(`${this.PREFIX}pin_hash`);
         }
-
-        return await SecureStore.getItemAsync(`${this.PREFIX}pin_hash`);
+        return null;
     }
 
     
     async setBiometricEnabled(enabled: boolean): Promise<void> {
         const key = `${this.PREFIX}biometric_enabled`;
         const value = enabled ? 'true' : 'false';
-
-        if (!this.isExpoEnvironment) {
-            if (typeof window !== 'undefined') {
-                localStorage.setItem(key, value);
-            }
-            return;
+        if (typeof window !== 'undefined') {
+            localStorage.setItem(key, value);
         }
-
-        await SecureStore.setItemAsync(key, value);
     }
 
     
     async isBiometricEnabled(): Promise<boolean> {
         const key = `${this.PREFIX}biometric_enabled`;
-
-        if (!this.isExpoEnvironment) {
-            if (typeof window !== 'undefined') {
-                return localStorage.getItem(key) === 'true';
-            }
-            return false;
+        if (typeof window !== 'undefined') {
+            return localStorage.getItem(key) === 'true';
         }
-
-        const value = await SecureStore.getItemAsync(key);
-        return value === 'true';
+        return false;
     }
 
     
@@ -148,25 +81,7 @@ class MobileStorage {
         durationMinutes: number = 30,
         requireAuth: boolean = true
     ): Promise<void> {
-        if (!this.isExpoEnvironment) {
-            return browserStorage.storeSession(publicKey, durationMinutes);
-        }
-
-        const session = {
-            publicKey,
-            unlockedAt: Date.now(),
-            expiresAt: Date.now() + durationMinutes * 60 * 1000,
-        };
-
-        const options: SecureStoreOptions = {
-            requireAuthentication: requireAuth,
-        };
-
-        await SecureStore.setItemAsync(
-            `${this.PREFIX}session`,
-            JSON.stringify(session),
-            options
-        );
+        return browserStorage.storeSession(publicKey, durationMinutes);
     }
 
     
@@ -174,89 +89,37 @@ class MobileStorage {
         publicKey: string;
         expiresAt: number;
     } | null> {
-        if (!this.isExpoEnvironment) {
-            return browserStorage.getSession();
-        }
-
-        const value = await SecureStore.getItemAsync(`${this.PREFIX}session`);
-        if (!value) return null;
-
-        try {
-            const session = JSON.parse(value);
-
-            
-            if (Date.now() > session.expiresAt) {
-                await this.clearSessionMobile();
-                return null;
-            }
-
-            return {
-                publicKey: session.publicKey,
-                expiresAt: session.expiresAt,
-            };
-        } catch {
-            return null;
-        }
+        return browserStorage.getSession();
     }
 
     
     async clearSessionMobile(): Promise<void> {
-        if (!this.isExpoEnvironment) {
-            return browserStorage.clearSession();
-        }
-
-        await SecureStore.deleteItemAsync(`${this.PREFIX}session`);
+        return browserStorage.clearSession();
     }
 
     
     async migrateFromVersion(fromVersion: number): Promise<void> {
-        
-        console.log(`Migrating from storage version ${fromVersion}`);
-
-        
+        console.log(`Migrating from storage version ${fromVersion} (no-op on web)`);
     }
 
     
     async getAllWalletIdsMobile(): Promise<string[]> {
-        if (!this.isExpoEnvironment) {
-            return browserStorage.getAllWalletIds();
-        }
-
-        
-        const metadataKey = `${this.PREFIX}wallet_ids`;
-        const value = await SecureStore.getItemAsync(metadataKey);
-
-        if (!value) return [];
-
-        try {
-            return JSON.parse(value);
-        } catch {
-            return [];
-        }
+        return browserStorage.getAllWalletIds();
     }
 
     
     private async updateWalletIds(ids: string[]): Promise<void> {
-        if (!this.isExpoEnvironment) return;
-
-        const metadataKey = `${this.PREFIX}wallet_ids`;
-        await SecureStore.setItemAsync(metadataKey, JSON.stringify(ids));
+        // No-op on web
     }
 
     
     async addWalletIdToMetadata(id: string): Promise<void> {
-        const ids = await this.getAllWalletIdsMobile();
-        if (!ids.includes(id)) {
-            ids.push(id);
-            await this.updateWalletIds(ids);
-        }
+        // No-op on web
     }
 
     
     async removeWalletIdFromMetadata(id: string): Promise<void> {
-        const ids = await this.getAllWalletIdsMobile();
-        const filtered = ids.filter((walletId) => walletId !== id);
-        await this.updateWalletIds(filtered);
+        // No-op on web
     }
 }
 

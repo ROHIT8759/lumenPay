@@ -9,6 +9,7 @@ import { networkProvider } from '@/lib/lumenVault/networkProvider';
 import { useWallet } from './WalletProvider';
 import { Copy, Eye, EyeOff, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 import { walletAuth } from '@/lib/lumenVault/walletAuth';
+import { setUnlockedKeypair } from '@/lib/lumenVault/keyCache';
 
 export function CreateWallet() {
     const { refreshState } = useWallet();
@@ -70,6 +71,13 @@ export function CreateWallet() {
             
             
             await secureStorage.storeWallet(createdWallet.publicKey, walletData);
+
+            await secureStorage.storeSession(createdWallet.publicKey);
+
+            const session = await secureStorage.getSession();
+            if (session) {
+                setUnlockedKeypair(createdWallet.publicKey, kp, session.expiresAt);
+            }
 
             
             await networkProvider.fundTestnetAccount(createdWallet.publicKey);
