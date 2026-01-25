@@ -3,7 +3,8 @@
 import { supabase } from './supabaseClient';
 import { permissionService } from './permissionService';
 import { contractService } from './contractService';
-import { setFreighter } from '@stellar/freighter-api';
+import { createCustodialSigner, getCustodialWalletPublicKey } from './custodialWalletSigner';
+import { Networks } from '@stellar/stellar-sdk';
 
 
 
@@ -399,14 +400,12 @@ class LoanEscrowService {
                 return '';
             }
 
-            // Get Freighter to sign transaction
-            const { isConnected, getPublicKey, signTransaction } = await setFreighter();
+            // Get custodial wallet public key
+            const publicKey = await getCustodialWalletPublicKey(wallet);
             
-            if (!isConnected()) {
-                throw new Error('Wallet not connected');
+            if (!publicKey) {
+                throw new Error('Custodial wallet not found for user');
             }
-
-            const publicKey = await getPublicKey();
             
             // Generate loan ID (in production, use better ID generation)
             const loanId = Math.floor(Math.random() * 1000000);
@@ -422,6 +421,9 @@ class LoanEscrowService {
             // Convert amount to stroops (multiply by 10^7 for Stellar)
             const amountInStroops = Math.floor(amount * 10000000).toString();
 
+            // Create custodial signer
+            const signTransaction = createCustodialSigner(wallet, Networks.TESTNET);
+
             // Call escrow contract
             const result = await contractService.lockCollateral(
                 loanId,
@@ -429,12 +431,7 @@ class LoanEscrowService {
                 lenderAddress,
                 assetAddress,
                 amountInStroops,
-                async (xdr: string) => {
-                    return await signTransaction(xdr, {
-                        network: 'TESTNET',
-                        networkPassphrase: 'Test SDF Network ; September 2015',
-                    });
-                }
+                signTransaction
             );
 
             if (result.success && result.transactionHash) {
@@ -466,15 +463,18 @@ class LoanEscrowService {
                 return '';
             }
 
-            const { isConnected, signTransaction } = await setFreighter();
-            
-            if (!isConnected()) {
-                throw new Error('Wallet not connected');
+            // Get custodial wallet for borrower
+            const publicKey = await getCustodialWalletPublicKey(borrower);
+            if (!publicKey) {
+                throw new Error('Custodial wallet not found for borrower');
             }
 
             // Token address (USDC or XLM)
             const tokenAddress = process.env.STELLAR_USDC_ISSUER || '';
             const principalInStroops = Math.floor(principal * 10000000).toString();
+
+            // Create custodial signer
+            const signTransaction = createCustodialSigner(borrower, Networks.TESTNET);
 
             const result = await contractService.createLoan(
                 loanId,
@@ -484,12 +484,7 @@ class LoanEscrowService {
                 interestRateBps,
                 tenureMonths,
                 tokenAddress,
-                async (xdr: string) => {
-                    return await signTransaction(xdr, {
-                        network: 'TESTNET',
-                        networkPassphrase: 'Test SDF Network ; September 2015',
-                    });
-                }
+                signTransaction
             );
 
             if (result.success && result.transactionHash) {

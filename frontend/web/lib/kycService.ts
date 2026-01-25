@@ -2,7 +2,8 @@
 
 import { supabase } from './supabaseClient';
 import { contractService } from './contractService';
-import { setFreighter } from '@stellar/freighter-api';
+import { createCustodialSigner, getCustodialWalletPublicKey } from './custodialWalletSigner';
+import { Networks } from '@stellar/stellar-sdk';
 
 interface KYCStatus {
   userId: string;
@@ -218,24 +219,22 @@ class KYCService {
    */
   private async recordKYCOnChain(walletAddress: string, level: number): Promise<void> {
     try {
-      const { isConnected, getPublicKey, signTransaction } = await setFreighter();
+      // Use admin wallet for KYC verification
+      const adminUserId = process.env.ADMIN_USER_ID || 'admin';
+      const adminPublicKey = await getCustodialWalletPublicKey(adminUserId);
       
-      if (!isConnected()) {
-        throw new Error('Wallet not connected');
+      if (!adminPublicKey) {
+        throw new Error('Admin custodial wallet not found');
       }
 
-      const adminPublicKey = await getPublicKey();
+      // Create custodial signer for admin
+      const signTransaction = createCustodialSigner(adminUserId, Networks.TESTNET);
 
       const result = await contractService.verifyKYC(
         walletAddress,
         level,
         adminPublicKey,
-        async (xdr: string) => {
-          return await signTransaction(xdr, {
-            network: 'TESTNET',
-            networkPassphrase: 'Test SDF Network ; September 2015',
-          });
-        }
+        signTransaction
       );
 
       if (!result.success) {
