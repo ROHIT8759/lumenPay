@@ -1,4 +1,3 @@
-import { createClient } from '@supabase/supabase-js';
 import { IndexerService } from '../services/indexerService';
 import dotenv from 'dotenv';
 

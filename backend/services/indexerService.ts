@@ -19,9 +19,9 @@ const sorobanServer = new SorobanRpc.Server(SOROBAN_RPC_URL);
 
 interface IndexerState {
     id: number;
-    last_horizon_cursor: string;
-    last_soroban_ledger: number;
-    updated_at: Date;
+    lastHorizonCursor: string;
+    lastSorobanLedger: number;
+    updatedAt: Date;
 }
 
 export class IndexerService {
@@ -96,9 +96,8 @@ export class IndexerService {
             const newState = await prisma.indexerState.create({
                 data: {
                     id: 1,
-                    last_horizon_cursor: startCursor,
-                    last_soroban_ledger: 0,
-                    updated_at: new Date(),
+                    lastHorizonCursor: startCursor,
+                    lastSorobanLedger: 0,
                 }
             });
 
@@ -115,8 +114,7 @@ export class IndexerService {
         await prisma.indexerState.update({
             where: { id: 1 },
             data: {
-                last_horizon_cursor: cursor,
-                updated_at: new Date(),
+                lastHorizonCursor: cursor,
             }
         });
     }
@@ -125,8 +123,7 @@ export class IndexerService {
         await prisma.indexerState.update({
             where: { id: 1 },
             data: {
-                last_soroban_ledger: ledger,
-                updated_at: new Date(),
+                lastSorobanLedger: ledger,
             }
         });
     }
@@ -136,7 +133,7 @@ export class IndexerService {
      */
     private async indexHorizonPayments() {
         const state = await this.getState();
-        const cursor = state.last_horizon_cursor;
+        const cursor = state.lastHorizonCursor;
 
         try {
             const payments = await horizonServer.payments()
@@ -193,16 +190,15 @@ export class IndexerService {
 
         // 1. Handle Receiver (Inbound)
         if (receiverUser) {
-            await this.handleTransactionRecord({
-                walletAddress: payment.to, // Receiver is the user
-                counterparty: payment.from,
+            await this.handleUnifiedTransactionRecord({
+                walletAddress: payment.to,
+                fromAddress: payment.from,
+                toAddress: payment.to,
                 amount,
                 assetCode,
                 assetIssuer,
-                type: 'RECEIVED',
-                hash: payment.transaction_hash,
-                status: 'SUCCESS',
-                timestamp: new Date(payment.created_at)
+                txHash: payment.transaction_hash,
+                timestamp: new Date(payment.created_at),
             });
 
             // Notify Receiver
@@ -216,16 +212,15 @@ export class IndexerService {
 
         // 2. Handle Sender (Outbound)
         if (senderUser) {
-            await this.handleTransactionRecord({
-                walletAddress: payment.from, // Sender is the user
-                counterparty: payment.to,
+            await this.handleUnifiedTransactionRecord({
+                walletAddress: payment.from,
+                fromAddress: payment.from,
+                toAddress: payment.to,
                 amount,
                 assetCode,
                 assetIssuer,
-                type: 'PAYMENT',
-                hash: payment.transaction_hash,
-                status: 'SUCCESS',
-                timestamp: new Date(payment.created_at)
+                txHash: payment.transaction_hash,
+                timestamp: new Date(payment.created_at),
             });
 
             // Notify Sender
@@ -238,52 +233,56 @@ export class IndexerService {
         }
     }
 
-    private async handleTransactionRecord(params: {
-        walletAddress: string,
-        counterparty: string,
-        amount: string,
-        assetCode: string,
-        assetIssuer?: string,
-        type: 'PAYMENT' | 'RECEIVED',
-        hash: string,
-        status: 'SUCCESS',
-        timestamp: Date
+    private async handleUnifiedTransactionRecord(params: {
+        walletAddress: string;
+        fromAddress: string;
+        toAddress: string;
+        amount: string;
+        assetCode: string;
+        assetIssuer?: string;
+        txHash: string;
+        timestamp: Date;
     }) {
-        // Check if transaction exists (maybe inserted as pending)
-        const existing = await prisma.transaction.findUnique({
-            where: { txHash: params.hash }
+        const asset = params.assetIssuer ? `${params.assetCode}:${params.assetIssuer}` : params.assetCode;
+        const amount = Number(params.amount);
+
+        if (!Number.isFinite(amount)) {
+            return;
+        }
+
+        const existing = await prisma.unifiedTransaction.findFirst({
+            where: {
+                walletAddress: params.walletAddress,
+                txHash: params.txHash,
+            },
         });
 
         if (existing) {
-            // Update status depending on current status
-            if (existing.status !== 'SUCCESS') {
-                await prisma.transaction.update({
+            if (existing.status !== 'CONFIRMED') {
+                await prisma.unifiedTransaction.update({
                     where: { id: existing.id },
                     data: {
-                        status: 'SUCCESS',
-                        updatedAt: new Date(),
-                    }
+                        status: 'CONFIRMED',
+                    },
                 });
-                console.log(`🔄 Updated transaction ${params.hash} to success for user ${params.walletAddress}`);
             }
-        } else {
-            // Create new
-            await prisma.transaction.create({
-                data: {
-                    walletAddress: params.walletAddress,
-                    txHash: params.hash,
-                    fromAddress: params.type === 'PAYMENT' ? params.walletAddress : params.counterparty,
-                    toAddress: params.type === 'RECEIVED' ? params.walletAddress : params.counterparty,
-                    amount: params.amount,
-                    assetCode: params.assetCode,
-                    assetIssuer: params.assetIssuer,
-                    type: params.type, // Enum
-                    status: 'SUCCESS', // Enum
-                    createdAt: params.timestamp,
-                }
-            });
-            console.log(`📥 Indexed new transaction ${params.hash} for user ${params.walletAddress}`);
+            return;
         }
+
+        await prisma.unifiedTransaction.create({
+            data: {
+                walletAddress: params.walletAddress,
+                ledger: 'ONCHAIN',
+                type: 'PAYMENT',
+                asset,
+                amount,
+                txHash: params.txHash,
+                status: 'CONFIRMED',
+                fromAddress: params.fromAddress,
+                toAddress: params.toAddress,
+                createdAt: params.timestamp,
+            },
+        });
     }
 
     /**
@@ -292,7 +291,7 @@ export class IndexerService {
      */
     private async indexSorobanEvents() {
         const state = await this.getState();
-        const startLedger = state.last_soroban_ledger + 1;
+        const startLedger = state.lastSorobanLedger + 1;
 
         try {
             // Poll latest ledger to see if we're behind

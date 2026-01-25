@@ -9,7 +9,8 @@ import {
     networkProvider,
     permissionManager,
     mobileStorage,
-    biometricAuth
+    biometricAuth,
+    transactionBuilder
 } from '@/lib/lumenVault';
 import { WalletData, getKeypairFromWallet } from '@/lib/lumenVault/keyManager';
 
@@ -81,6 +82,10 @@ export function WalletProvider({ children }: WalletProviderProps) {
             const settings = await secureStorage.getSettings();
             setNetwork(settings.network);
             networkProvider.switchNetwork(settings.network);
+            
+            // Initialize transaction builder
+            transactionBuilder.switchNetwork(settings.network);
+            transactionBuilder.setHorizonServer(networkProvider.getHorizonServer());
 
 
             const unlocked = await secureStorage.isUnlocked();
@@ -167,7 +172,8 @@ export function WalletProvider({ children }: WalletProviderProps) {
     const switchNetwork = async (newNetwork: 'testnet' | 'public') => {
         setNetwork(newNetwork);
         networkProvider.switchNetwork(newNetwork);
-
+        transactionBuilder.switchNetwork(newNetwork);
+        transactionBuilder.setHorizonServer(networkProvider.getHorizonServer());
 
         const settings = await secureStorage.getSettings();
         await secureStorage.storeSettings({ ...settings, network: newNetwork });

@@ -24,7 +24,7 @@ const linkCodes = new Map<string, { walletAddress: string; expiresAt: Date }>();
  */
 router.post('/link/request', authenticate, async (req: AuthenticatedRequest, res: Response) => {
     try {
-        const walletAddress = req.user!.publicKey;
+        const walletAddress = req.user!.walletAddress;
 
         // Check if already linked
         const existingLink = await prisma.telegramLink.findUnique({
@@ -72,11 +72,11 @@ router.post('/link/request', authenticate, async (req: AuthenticatedRequest, res
 /**
  * POST /telegram/link/verify
  * Verify link code (called by Telegram bot)
- * Body: { linkCode, telegramUserId, telegramChat }
+ * Body: { linkCode, telegramUserId, chatId }
  */
 router.post('/link/verify', async (req, res: Response) => {
     try {
-        const { linkCode, telegramUserId, telegramChat } = req.body;
+        const { linkCode, telegramUserId, chatId } = req.body;
 
         if (!linkCode || !telegramUserId) {
             return res.status(400).json({
@@ -118,7 +118,7 @@ router.post('/link/verify', async (req, res: Response) => {
             data: {
                 walletAddress: linkData.walletAddress,
                 telegramUserId: telegramUserId.toString(),
-                telegramChat: telegramChat?.toString(),
+                chatId: chatId?.toString() || telegramUserId.toString(),
             },
         });
 
@@ -145,7 +145,7 @@ router.post('/link/verify', async (req, res: Response) => {
  */
 router.post('/unlink', authenticate, async (req: AuthenticatedRequest, res: Response) => {
     try {
-        const walletAddress = req.user!.publicKey;
+        const walletAddress = req.user!.walletAddress;
 
         const link = await prisma.telegramLink.findUnique({
             where: { walletAddress },
@@ -181,7 +181,7 @@ router.post('/unlink', authenticate, async (req: AuthenticatedRequest, res: Resp
  */
 router.get('/status', authenticate, async (req: AuthenticatedRequest, res: Response) => {
     try {
-        const walletAddress = req.user!.publicKey;
+        const walletAddress = req.user!.walletAddress;
 
         const link = await prisma.telegramLink.findUnique({
             where: { walletAddress },
@@ -244,7 +244,7 @@ router.post('/notify', async (req, res: Response) => {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                chat_id: link.telegramChat || link.telegramUserId,
+                chat_id: link.chatId || link.telegramUserId,
                 text: message,
                 parse_mode: 'HTML',
             }),

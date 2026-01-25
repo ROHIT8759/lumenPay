@@ -202,7 +202,7 @@ export default function Home() {
 
       {/* 2. Balance Card */}
       <motion.section variants={item}>
-        <GlassCard className="bg-gradient-to-br from-blue-900/40 to-black border-blue-500/20">
+        <GlassCard className="bg-linear-to-br from-blue-900/40 to-black border-blue-500/20">
           <div className="flex justify-between items-start mb-4">
             <div>
               <h2 className="text-sm text-gray-300 mb-1">Total Balance</h2>
@@ -404,7 +404,7 @@ export default function Home() {
 
       {/* 6. Balance Card */}
       <motion.section variants={item} className="pb-8">
-        <GlassCard className="bg-gradient-to-br from-blue-900/40 to-black border-blue-500/20">
+        <GlassCard className="bg-linear-to-br from-blue-900/40 to-black border-blue-500/20">
           <div className="flex justify-between items-start mb-4">
             <div>
               <h2 className="text-xs sm:text-sm text-gray-300 mb-0.5 sm:mb-1">Total Balance</h2>

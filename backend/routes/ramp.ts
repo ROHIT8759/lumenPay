@@ -37,7 +37,7 @@ const router = Router();
  */
 router.post('/on/create', authenticate, async (req: AuthenticatedRequest, res: Response) => {
     try {
-        const walletAddress = req.user!.publicKey;
+        const walletAddress = req.user!.walletAddress;
         const { inrAmount, asset } = req.body;
 
         if (!inrAmount || inrAmount <= 0) {
@@ -102,7 +102,7 @@ router.post('/on/:id/confirm-inr', async (req, res) => {
 router.post('/on/:id/build-onchain', authenticate, async (req: AuthenticatedRequest, res: Response) => {
     try {
         const { id } = req.params;
-        const toAddress = req.user!.publicKey;
+        const toAddress = req.user!.walletAddress;
 
         const result = await rampService.buildOnRampOnChainTx(id, toAddress);
 
@@ -155,7 +155,7 @@ router.get('/on/:id', authenticate, async (req: AuthenticatedRequest, res: Respo
         }
 
         // Verify ownership
-        if (intent.walletAddress !== req.user!.publicKey) {
+        if (intent.walletAddress !== req.user!.walletAddress) {
             return res.status(403).json({ error: 'Not your intent' });
         }
 
@@ -181,7 +181,7 @@ router.get('/on/:id', authenticate, async (req: AuthenticatedRequest, res: Respo
  */
 router.post('/off/create', authenticate, async (req: AuthenticatedRequest, res: Response) => {
     try {
-        const walletAddress = req.user!.publicKey;
+        const walletAddress = req.user!.walletAddress;
         const { cryptoAmount, asset, bankAccountNo, bankIfsc, upiId } = req.body;
 
         if (!cryptoAmount || cryptoAmount <= 0) {
@@ -308,7 +308,7 @@ router.get('/off/:id', authenticate, async (req: AuthenticatedRequest, res: Resp
         }
 
         // Verify ownership
-        if (intent.walletAddress !== req.user!.publicKey) {
+        if (intent.walletAddress !== req.user!.walletAddress) {
             return res.status(403).json({ error: 'Not your intent' });
         }
 
@@ -334,7 +334,7 @@ router.get('/off/:id', authenticate, async (req: AuthenticatedRequest, res: Resp
  */
 router.get('/history', authenticate, async (req: AuthenticatedRequest, res: Response) => {
     try {
-        const walletAddress = req.user!.publicKey;
+        const walletAddress = req.user!.walletAddress;
         const history = await rampService.getUserRampHistory(walletAddress);
 
         res.json({

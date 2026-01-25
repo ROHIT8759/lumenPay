@@ -11,7 +11,7 @@ export interface AuthNonceResponse {
 export interface AuthVerifyResponse {
     token: string;
     user: {
-        address: string;
+        walletAddress: string;
     };
 }
 
@@ -26,13 +26,13 @@ class WalletAuthService {
     private readonly SESSION_KEY = 'lumenvault_session';
 
 
-    async requestNonce(publicKey: string): Promise<{
+    async requestNonce(walletAddress: string): Promise<{
         nonce: string;
         expiresAt: number;
         error?: string;
     }> {
         try {
-            const response = await fetch(`${API.BASE_URL}${API.AUTH.NONCE}?publicKey=${publicKey}`, {
+            const response = await fetch(`${API.BASE_URL}${API.AUTH.NONCE}?walletAddress=${walletAddress}`, {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
@@ -90,7 +90,7 @@ class WalletAuthService {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    publicKey,
+                    walletAddress: publicKey,
                     signature: signResult.signedMessage.signature,
                     nonce: nonceResult.nonce,
                 }),
@@ -105,7 +105,7 @@ class WalletAuthService {
 
             const session: AuthSession = {
                 token: verifyData.token,
-                address: verifyData.user.address,
+                address: verifyData.user.walletAddress,
                 expiresAt: Date.now() + 24 * 60 * 60 * 1000,
             };
 
@@ -145,7 +145,7 @@ class WalletAuthService {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    publicKey,
+                    walletAddress: publicKey,
                     signature,
                     nonce: nonceResult.nonce,
                 }),

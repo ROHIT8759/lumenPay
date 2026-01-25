@@ -1,5 +1,5 @@
 import { Horizon, Transaction, Networks } from '@stellar/stellar-sdk';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, LedgerType, TxStatus, TxType } from '@prisma/client';
 
 /**
  * Transaction Relay Service
@@ -117,25 +117,34 @@ export class TxRelayService {
         assetIssuer?: string
     ): Promise<void> {
         try {
-            // Check if transaction already exists
-            const existing = await this.prisma.unifiedTransaction.findFirst({
-                where: { txHash: hash }
+            await this.prisma.user.upsert({
+                where: { walletAddress },
+                update: {},
+                create: { walletAddress },
             });
-            
+
+            const existing = await this.prisma.unifiedTransaction.findFirst({
+                where: { walletAddress, txHash: hash },
+            });
+
             if (existing) return;
+
+            const asset = assetIssuer ? `${assetCode}:${assetIssuer}` : assetCode;
+            const parsedAmount = Number(amount);
+            if (!Number.isFinite(parsedAmount)) return;
 
             await this.prisma.unifiedTransaction.create({
                 data: {
-                    walletAddress: walletAddress,
+                    walletAddress,
                     txHash: hash,
-                    ledger: 'ON_CHAIN',
-                    type: fromAddress === walletAddress ? 'PAYMENT' : 'RECEIVED',
-                    asset: assetCode,
-                    amount: parseFloat(amount),
-                    status: 'PENDING',
-                    fromAddress: fromAddress,
-                    toAddress: toAddress,
-                }
+                    ledger: LedgerType.ONCHAIN,
+                    type: TxType.PAYMENT,
+                    asset,
+                    amount: parsedAmount,
+                    status: TxStatus.PENDING,
+                    fromAddress,
+                    toAddress,
+                },
             });
         } catch (error) {
             console.error('Failed to record transaction:', error);

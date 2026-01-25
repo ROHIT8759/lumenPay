@@ -29,7 +29,7 @@ router.post('/build-lock', authenticate, async (req: AuthenticatedRequest, res: 
             durationSeconds,
         } = req.body;
 
-        const borrower = req.user!.publicKey;
+        const borrower = req.user!.walletAddress;
 
         if (!loanId || !lender || !collateralToken || !collateralAmount || !loanAmount || !durationSeconds) {
             return res.status(400).json({
@@ -70,7 +70,7 @@ router.post('/build-lock', authenticate, async (req: AuthenticatedRequest, res: 
 router.post('/build-release', authenticate, async (req: AuthenticatedRequest, res: Response) => {
     try {
         const { loanId } = req.body;
-        const lender = req.user!.publicKey;
+        const lender = req.user!.walletAddress;
 
         if (!loanId) {
             return res.status(400).json({

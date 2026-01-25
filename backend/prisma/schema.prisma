@@ -1,67 +1,96 @@
 generator client {
   provider        = "prisma-client-js"
-  previewFeatures = ["multiSchema"]
 }
 
 datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
-  schemas   = ["auth", "public"]
+  relationMode = "prisma"
 }
 
-// Map to existing 'users' table in public schema
 model User {
-  walletAddress  String           @id @map("walletAddress") // Check column name - db pull said 'walletAddress' in Step 368?
-  kycStatus      KycStatus        @default(PENDING)
-  createdAt      DateTime         @default(now())
-  
-  transactions   Transaction[]
-  onRampIntents  OnRampIntent[]
-  offRampIntents OffRampIntent[]
-  stockPositions StockPosition[]
-  telegramLink   TelegramLink?
-  
+  walletAddress   String               @id
+  createdAt       DateTime             @default(now())
+  kycStatus       KycStatus            @default(PENDING)
+
+  balances        OffchainBalance[]
+  transactions    UnifiedTransaction[]
+  onRampIntents   OnRampIntent[]
+  offRampIntents  OffRampIntent[]
+  stockPositions  StockPosition[]
+  telegramLink    TelegramLink?
+  kycRecord       KycRecord?
+
   @@map("users")
-  @@schema("public")
 }
 
-// Map to 'auth_nonces'
 model AuthNonce {
-  id            String   @id @default(uuid())
-  walletAddress String   @unique @map("walletAddress") // db pull said 'walletAddress'
+  walletAddress String
   nonce         String
   expiresAt     DateTime
   createdAt     DateTime @default(now())
-  
-  @@index([walletAddress])
-  @@index([nonce])
+
+  @@id([walletAddress, nonce])
+  @@index([expiresAt])
   @@map("auth_nonces")
-  @@schema("public")
 }
 
-model Transaction {
-  id            String          @id @default(uuid())
+model OffchainBalance {
   walletAddress String
-  txHash        String          @unique
-  fromAddress   String
-  toAddress     String
-  amount        String
-  assetCode     String          @default("XLM")
-  assetIssuer   String?
-  type          TransactionType
-  status        TxStatus        @default(PENDING)
+  asset         String
+  balance       Float    @default(0)
+  updatedAt     DateTime @updatedAt
+
+  user          User     @relation(fields: [walletAddress], references: [walletAddress])
+
+  @@id([walletAddress, asset])
+  @@map("offchain_balances")
+}
+
+model UnifiedTransaction {
+  id            String     @id @default(uuid())
+  walletAddress String
+  ledger        LedgerType
+  type          TxType
+  asset         String
+  amount        Float
+  txHash        String?
+  status        TxStatus
+  fromAddress   String?
+  toAddress     String?
   memo          String?
-  ledger        Int?
-  createdAt     DateTime        @default(now())
-  updatedAt     DateTime        @updatedAt
-  
-  user          User            @relation(fields: [walletAddress], references: [walletAddress])
-  
+  createdAt     DateTime   @default(now())
+
+  user          User       @relation(fields: [walletAddress], references: [walletAddress])
+
+  @@unique([walletAddress, txHash])
   @@index([walletAddress])
   @@index([txHash])
-  @@map("transactions")
-  @@schema("public")
+  @@map("unified_transactions")
+}
+
+model KycRecord {
+  walletAddress String     @id
+  provider      String
+  status        KycStatus  @default(PENDING)
+  providerRef   String?
+  verifiedAt    DateTime?
+  updatedAt     DateTime   @updatedAt
+
+  user          User       @relation(fields: [walletAddress], references: [walletAddress])
+
+  @@map("kyc_records")
+}
+
+model TelegramLink {
+  walletAddress  String   @id
+  chatId         String
+  telegramUserId String?
+  linkedAt       DateTime @default(now())
+
+  user           User     @relation(fields: [walletAddress], references: [walletAddress])
+
+  @@map("telegram_links")
 }
 
 model OnRampIntent {
@@ -83,7 +112,6 @@ model OnRampIntent {
   @@index([walletAddress])
   @@index([status])
   @@map("onramp_intents")
-  @@schema("public")
 }
 
 model OffRampIntent {
@@ -108,7 +136,6 @@ model OffRampIntent {
   @@index([walletAddress])
   @@index([status])
   @@map("offramp_intents")
-  @@schema("public")
 }
 
 model StockPosition {
@@ -128,20 +155,6 @@ model StockPosition {
   @@unique([walletAddress, symbol])
   @@index([walletAddress])
   @@map("stock_positions")
-  @@schema("public")
-}
-
-model TelegramLink {
-  id             String   @id @default(uuid())
-  walletAddress  String   @unique
-  telegramUserId String
-  telegramChat   String?
-  linkedAt       DateTime @default(now())
-  
-  user           User     @relation(fields: [walletAddress], references: [walletAddress])
-  
-  @@map("telegram_links")
-  @@schema("public")
 }
 
 model EscrowPosition {
@@ -162,7 +175,6 @@ model EscrowPosition {
   @@index([borrowerAddress])
   @@index([lenderAddress])
   @@map("escrow_positions")
-  @@schema("public")
 }
 
 enum KycStatus {
@@ -170,26 +182,26 @@ enum KycStatus {
   IN_PROGRESS
   APPROVED
   REJECTED
-  @@schema("public")
 }
 
-enum TransactionType {
+enum LedgerType {
+  ONCHAIN
+  OFFCHAIN
+  HYBRID
+}
+
+enum TxType {
   PAYMENT
-  RECEIVED
-  ESCROW_LOCK
-  ESCROW_RELEASE
-  ON_RAMP
-  OFF_RAMP
-  STOCK_BUY
-  STOCK_SELL
-  @@schema("public")
+  ESCROW
+  ONRAMP
+  OFFRAMP
+  STOCK
 }
 
 enum TxStatus {
   PENDING
-  SUCCESS
+  CONFIRMED
   FAILED
-  @@schema("public")
 }
 
 enum RampStatus {
@@ -201,7 +213,6 @@ enum RampStatus {
   COMPLETED
   FAILED
   CANCELLED
-  @@schema("public")
 }
 
 enum EscrowStatus {
@@ -210,7 +221,6 @@ enum EscrowStatus {
   RELEASED
   LIQUIDATED
   CANCELLED
-  @@schema("public")
 }
 
 model IndexerState {
@@ -220,5 +230,4 @@ model IndexerState {
   updatedAt         DateTime @updatedAt
   
   @@map("indexer_state")
-  @@schema("public")
 }

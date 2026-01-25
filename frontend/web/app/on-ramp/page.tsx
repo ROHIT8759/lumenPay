@@ -163,7 +163,7 @@ export default function OnRampPage() {
 
                         {/* Info */}
                         <div className="flex gap-3 p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-xl">
-                            <ShieldCheck className="text-yellow-500 flex-shrink-0" size={20} />
+                            <ShieldCheck className="text-yellow-500 shrink-0" size={20} />
                             <p className="text-xs text-gray-300 leading-relaxed">
                                 Transactions are processed securely. Funds usually arrive in your wallet within 1-5 minutes after payment confirmation.
                             </p>

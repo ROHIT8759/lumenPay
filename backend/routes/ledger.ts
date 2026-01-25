@@ -20,7 +20,7 @@ const router = Router();
  */
 router.get('/balance', authenticate, async (req: AuthenticatedRequest, res: Response) => {
     try {
-        const walletAddress = req.user!.publicKey;
+        const walletAddress = req.user!.walletAddress;
         const balances = await offchainLedgerService.getAllBalances(walletAddress);
 
         res.json({
@@ -43,7 +43,7 @@ router.get('/balance', authenticate, async (req: AuthenticatedRequest, res: Resp
  */
 router.get('/balance/:asset', authenticate, async (req: AuthenticatedRequest, res: Response) => {
     try {
-        const walletAddress = req.user!.publicKey;
+        const walletAddress = req.user!.walletAddress;
         const { asset } = req.params;
 
         const balance = await offchainLedgerService.getBalance(walletAddress, asset);
@@ -68,7 +68,7 @@ router.get('/balance/:asset', authenticate, async (req: AuthenticatedRequest, re
  */
 router.post('/transfer', authenticate, async (req: AuthenticatedRequest, res: Response) => {
     try {
-        const fromWallet = req.user!.publicKey;
+        const fromWallet = req.user!.walletAddress;
         const { toWallet, amount, asset = 'XLM', memo } = req.body;
 
         if (!toWallet || !amount) {
@@ -120,7 +120,7 @@ router.post('/transfer', authenticate, async (req: AuthenticatedRequest, res: Re
  */
 router.get('/transactions', authenticate, async (req: AuthenticatedRequest, res: Response) => {
     try {
-        const walletAddress = req.user!.publicKey;
+        const walletAddress = req.user!.walletAddress;
         const { limit, ledger } = req.query;
 
         const transactions = await offchainLedgerService.getTransactionHistory(

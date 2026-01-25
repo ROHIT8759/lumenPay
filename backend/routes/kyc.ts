@@ -6,10 +6,6 @@ const router = Router();
 const DIDIT_API_URL = 'https://api.didit.me/v1';
 const DIDIT_API_KEY = process.env.DIDIT_API_KEY;
 
-/**
- * POST /api/kyc/session
- * Create a new KYC verification session
- */
 router.post('/session', async (req: Request, res: Response) => {
     try {
         const { walletAddress } = req.body;
@@ -42,12 +38,27 @@ router.post('/session', async (req: Request, res: Response) => {
 
         const data = (await response.json()) as any;
 
-        await prisma.user.update({
-            where: { walletAddress },
-            data: {
-                kycSessionId: data.session_id,
-                kycStatus: 'IN_PROGRESS',
-            },
+        await prisma.$transaction(async (tx) => {
+            await tx.user.upsert({
+                where: { walletAddress },
+                update: { kycStatus: 'IN_PROGRESS' },
+                create: { walletAddress, kycStatus: 'IN_PROGRESS' },
+            });
+
+            await tx.kycRecord.upsert({
+                where: { walletAddress },
+                update: {
+                    provider: 'didit',
+                    status: 'IN_PROGRESS',
+                    providerRef: data.session_id,
+                },
+                create: {
+                    walletAddress,
+                    provider: 'didit',
+                    status: 'IN_PROGRESS',
+                    providerRef: data.session_id,
+                },
+            });
         });
 
         res.json({
@@ -73,11 +84,16 @@ router.get('/status', async (req: Request, res: Response) => {
             return res.status(400).json({ error: 'Missing walletAddress' });
         }
 
-        // Check local DB for user's KYC status
-        const user = await prisma.user.findUnique({
-            where: { walletAddress },
-            select: { kycStatus: true, kycSessionId: true },
-        });
+        const [user, kyc] = await Promise.all([
+            prisma.user.findUnique({
+                where: { walletAddress },
+                select: { kycStatus: true },
+            }),
+            prisma.kycRecord.findUnique({
+                where: { walletAddress },
+                select: { providerRef: true },
+            }),
+        ]);
 
         if (!user) {
             return res.json({
@@ -93,9 +109,8 @@ router.get('/status', async (req: Request, res: Response) => {
             });
         }
 
-        // If in progress, check DiD iT API for latest status
-        if (user.kycSessionId && DIDIT_API_KEY) {
-            const response = await fetch(`${DIDIT_API_URL}/sessions/${user.kycSessionId}/decision`, {
+        if (kyc?.providerRef && DIDIT_API_KEY) {
+            const response = await fetch(`${DIDIT_API_URL}/sessions/${kyc.providerRef}/decision`, {
                 headers: {
                     Authorization: `Bearer ${DIDIT_API_KEY}`,
                 },
@@ -108,9 +123,19 @@ router.get('/status', async (req: Request, res: Response) => {
 
                 // Update DB if status changed to final
                 if (newStatus === 'APPROVED' || newStatus === 'REJECTED') {
-                    await prisma.user.update({
-                        where: { walletAddress },
-                        data: { kycStatus: newStatus },
+                    await prisma.$transaction(async (tx) => {
+                        await tx.user.update({
+                            where: { walletAddress },
+                            data: { kycStatus: newStatus },
+                        });
+
+                        await tx.kycRecord.update({
+                            where: { walletAddress },
+                            data: {
+                                status: newStatus,
+                                verifiedAt: new Date(),
+                            },
+                        });
                     });
                 }
 

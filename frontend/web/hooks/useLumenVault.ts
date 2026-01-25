@@ -4,10 +4,12 @@ import {
     generateKeypair,
     createWalletData,
     getKeypairFromWallet,
+    importKeypair,
     WalletData,
 } from '@/lib/lumenVault/keyManager';
 import { signingEngine } from '@/lib/lumenVault/signingEngine';
 import { walletAuth, AuthSession } from '@/lib/lumenVault/walletAuth';
+import { secureStorage } from '@/lib/lumenVault/secureStorage';
 import { NETWORK } from '@/lib/config';
 
 export interface LumenVaultState {
@@ -44,11 +46,19 @@ export interface LumenVaultActions {
     // Transaction signing
     signTransaction: (xdr: string, passphrase: string) => Promise<{ signedXdr: string; hash: string } | null>;
 
+    // Message signing
+    signMessage: (message: string, passphrase: string) => Promise<{ signature: string; publicKey: string } | null>;
+
     // Utility
     clearError: () => void;
 }
 
-const WALLET_STORAGE_KEY = 'lumenvault_wallet';
+async function getPrimaryWallet(): Promise<WalletData | null> {
+    const ids = await secureStorage.getAllWalletIds();
+    const walletId = ids[0];
+    if (!walletId) return null;
+    return secureStorage.getWallet(walletId);
+}
 
 export function useLumenVault(): [LumenVaultState, LumenVaultActions] {
     const [state, setState] = useState<LumenVaultState>({
@@ -72,28 +82,25 @@ export function useLumenVault(): [LumenVaultState, LumenVaultActions] {
 
     const initializeWallet = async () => {
         try {
-            // Check for existing wallet in localStorage
-            const stored = localStorage.getItem(WALLET_STORAGE_KEY);
-            if (stored) {
-                const data: WalletData = JSON.parse(stored);
-                setWalletData(data);
-                setState(prev => ({
-                    ...prev,
-                    isInitialized: true,
-                    publicKey: data.publicKey,
-                    isLocked: true, // Always start locked
-                }));
-            } else {
-                setState(prev => ({ ...prev, isInitialized: true }));
-            }
+            const data = await getPrimaryWallet();
+            const session = await secureStorage.getSession();
+            const isUnlocked = !!session;
+
+            setWalletData(data);
+            setState(prev => ({
+                ...prev,
+                isInitialized: true,
+                publicKey: data?.publicKey ?? null,
+                isLocked: !isUnlocked,
+            }));
 
             // Check for existing auth session
-            const session = walletAuth.getSession();
-            if (session) {
+            const authSession = walletAuth.getSession();
+            if (authSession) {
                 setState(prev => ({
                     ...prev,
                     isAuthenticated: true,
-                    session,
+                    session: authSession,
                 }));
             }
         } catch (error) {
@@ -112,8 +119,9 @@ export function useLumenVault(): [LumenVaultState, LumenVaultActions] {
             // Create wallet data with encrypted secret
             const data = await createWalletData(keypair, passphrase);
 
-            // Store in localStorage
-            localStorage.setItem(WALLET_STORAGE_KEY, JSON.stringify(data));
+            // Persist encrypted wallet locally (IndexedDB)
+            await secureStorage.storeWallet(data.publicKey, data);
+            await secureStorage.storeSession(data.publicKey);
 
             setWalletData(data);
             setState(prev => ({
@@ -142,14 +150,13 @@ export function useLumenVault(): [LumenVaultState, LumenVaultActions] {
 
         try {
             // Import keypair from secret
-            const { importKeypair } = await import('@/lib/lumenVault/keyManager');
             const keypair = importKeypair(secretKey);
 
             // Create wallet data
             const data = await createWalletData(keypair, passphrase);
 
-            // Store in localStorage
-            localStorage.setItem(WALLET_STORAGE_KEY, JSON.stringify(data));
+            await secureStorage.storeWallet(data.publicKey, data);
+            await secureStorage.storeSession(data.publicKey);
 
             setWalletData(data);
             setState(prev => ({
@@ -180,6 +187,7 @@ export function useLumenVault(): [LumenVaultState, LumenVaultActions] {
             // Try to decrypt - will throw if wrong passphrase
             await getKeypairFromWallet(walletData, passphrase);
 
+            await secureStorage.storeSession(walletData.publicKey);
             setState(prev => ({ ...prev, isLocked: false, error: null }));
             return true;
         } catch (_error: unknown) {
@@ -192,11 +200,15 @@ export function useLumenVault(): [LumenVaultState, LumenVaultActions] {
     }, [walletData]);
 
     const lockWallet = useCallback(() => {
+        void secureStorage.clearSession();
         setState(prev => ({ ...prev, isLocked: true }));
     }, []);
 
     const deleteWallet = useCallback(async () => {
-        localStorage.removeItem(WALLET_STORAGE_KEY);
+        if (walletData) {
+            await secureStorage.deleteWallet(walletData.publicKey);
+        }
+        await secureStorage.clearSession();
         walletAuth.signOut();
         setWalletData(null);
         setState({
@@ -210,7 +222,7 @@ export function useLumenVault(): [LumenVaultState, LumenVaultActions] {
             isAuthenticating: false,
             error: null,
         });
-    }, []);
+    }, [walletData]);
 
     const signIn = useCallback(async (passphrase: string): Promise<boolean> => {
         if (!walletData) {
@@ -295,6 +307,44 @@ export function useLumenVault(): [LumenVaultState, LumenVaultActions] {
         }
     }, [walletData]);
 
+    const signMessage = useCallback(async (
+        message: string,
+        passphrase: string
+    ): Promise<{ signature: string; publicKey: string } | null> => {
+        if (!walletData) {
+            setState(prev => ({ ...prev, error: 'No wallet found' }));
+            return null;
+        }
+
+        setState(prev => ({ ...prev, isSigning: true, error: null }));
+
+        try {
+            const result = await signingEngine.signMessage({
+                message,
+                walletData,
+                passphrase,
+            });
+
+            if (result.error) {
+                throw new Error(result.error);
+            }
+
+            setState(prev => ({ ...prev, isSigning: false }));
+
+            return {
+                signature: result.signedMessage.signature,
+                publicKey: result.signedMessage.publicKey,
+            };
+        } catch (error: unknown) {
+            setState(prev => ({
+                ...prev,
+                isSigning: false,
+                error: error instanceof Error ? error.message : 'Failed to sign message',
+            }));
+            return null;
+        }
+    }, [walletData]);
+
     const clearError = useCallback(() => {
         setState(prev => ({ ...prev, error: null }));
     }, []);
@@ -308,6 +358,7 @@ export function useLumenVault(): [LumenVaultState, LumenVaultActions] {
         signIn,
         signOut,
         signTransaction,
+        signMessage,
         clearError,
     };
 

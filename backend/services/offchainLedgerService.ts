@@ -1,4 +1,5 @@
-import { PrismaClient, LedgerType, TxType, TxStatus } from '@prisma/client';
+import { LedgerType, TxType, TxStatus, Prisma } from '@prisma/client';
+import prisma from '../lib/prisma';
 
 /**
  * Off-Chain Ledger Service
@@ -13,8 +14,6 @@ import { PrismaClient, LedgerType, TxType, TxStatus } from '@prisma/client';
  * - Instant
  * - Reversible (before settlement)
  */
-
-const prisma = new PrismaClient();
 
 export interface TransferParams {
     fromWallet: string;
@@ -37,6 +36,14 @@ export interface BalanceResult {
 }
 
 class OffchainLedgerService {
+    private async ensureUser(tx: Prisma.TransactionClient, walletAddress: string) {
+        await tx.user.upsert({
+            where: { walletAddress },
+            update: {},
+            create: { walletAddress },
+        });
+    }
+
     /**
      * Get off-chain balance for a wallet
      */
@@ -76,23 +83,27 @@ class OffchainLedgerService {
      * Credit an off-chain balance (e.g., from on-ramp)
      */
     async credit(walletAddress: string, amount: number, asset: string = 'XLM'): Promise<void> {
-        await prisma.offchainBalance.upsert({
-            where: {
-                walletAddress_asset: {
+        await prisma.$transaction(async (tx) => {
+            await this.ensureUser(tx, walletAddress);
+
+            await tx.offchainBalance.upsert({
+                where: {
+                    walletAddress_asset: {
+                        walletAddress,
+                        asset,
+                    },
+                },
+                create: {
                     walletAddress,
                     asset,
+                    balance: amount,
                 },
-            },
-            create: {
-                walletAddress,
-                asset,
-                balance: amount,
-            },
-            update: {
-                balance: {
-                    increment: amount,
+                update: {
+                    balance: {
+                        increment: amount,
+                    },
                 },
-            },
+            });
         });
     }
 
@@ -101,6 +112,12 @@ class OffchainLedgerService {
      * Returns false if insufficient balance
      */
     async debit(walletAddress: string, amount: number, asset: string = 'XLM'): Promise<boolean> {
+        await prisma.user.upsert({
+            where: { walletAddress },
+            update: {},
+            create: { walletAddress },
+        });
+
         const current = await this.getBalance(walletAddress, asset);
         
         if (current.balance < amount) {
@@ -142,6 +159,9 @@ class OffchainLedgerService {
         try {
             // Use a transaction for atomicity
             const result = await prisma.$transaction(async (tx) => {
+                await this.ensureUser(tx, fromWallet);
+                await this.ensureUser(tx, toWallet);
+
                 // Check sender balance
                 const senderBalance = await tx.offchainBalance.findUnique({
                     where: {
@@ -195,11 +215,11 @@ class OffchainLedgerService {
                 const senderTx = await tx.unifiedTransaction.create({
                     data: {
                         walletAddress: fromWallet,
-                        ledger: LedgerType.OFF_CHAIN,
+                        ledger: LedgerType.OFFCHAIN,
                         type: TxType.PAYMENT,
                         asset,
                         amount,
-                        status: TxStatus.SUCCESS,
+                        status: TxStatus.CONFIRMED,
                         fromAddress: fromWallet,
                         toAddress: toWallet,
                         memo,
@@ -210,11 +230,11 @@ class OffchainLedgerService {
                 await tx.unifiedTransaction.create({
                     data: {
                         walletAddress: toWallet,
-                        ledger: LedgerType.OFF_CHAIN,
-                        type: TxType.RECEIVED,
+                        ledger: LedgerType.OFFCHAIN,
+                        type: TxType.PAYMENT,
                         asset,
                         amount,
-                        status: TxStatus.SUCCESS,
+                        status: TxStatus.CONFIRMED,
                         fromAddress: fromWallet,
                         toAddress: toWallet,
                         memo,

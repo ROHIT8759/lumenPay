@@ -14,18 +14,29 @@ CREATE TABLE IF NOT EXISTS public.indexer_state (
 INSERT INTO public.indexer_state (id) VALUES (1)
 ON CONFLICT (id) DO NOTHING;
 
--- Telegram links table
-CREATE TABLE IF NOT EXISTS public.telegram_links (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    wallet_address TEXT UNIQUE NOT NULL,
-    telegram_user_id TEXT NOT NULL,
-    telegram_username TEXT,
-    verified_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
+-- Telegram links table (aligns with existing camelCase columns used by Prisma)
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.tables
+        WHERE table_schema = 'public' AND table_name = 'telegram_links'
+    ) THEN
+        CREATE TABLE "telegram_links" (
+            "walletAddress" TEXT PRIMARY KEY,
+            "chatId" TEXT NOT NULL,
+            "telegramUserId" TEXT,
+            "linkedAt" TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+        );
+    END IF;
+END $$;
 
-CREATE INDEX IF NOT EXISTS idx_telegram_wallet ON public.telegram_links(wallet_address);
-CREATE INDEX IF NOT EXISTS idx_telegram_user ON public.telegram_links(telegram_user_id);
+-- Backfill missing columns if the table already existed with a reduced shape
+ALTER TABLE "telegram_links"
+    ADD COLUMN IF NOT EXISTS "telegramUserId" TEXT,
+    ADD COLUMN IF NOT EXISTS "chatId" TEXT;
+
+CREATE INDEX IF NOT EXISTS idx_telegram_wallet ON "telegram_links"("walletAddress");
+CREATE INDEX IF NOT EXISTS idx_telegram_user ON "telegram_links"("telegramUserId");
 
 COMMENT ON TABLE public.indexer_state IS 'Stores last processed ledger for restart-safe event indexing';
-COMMENT ON TABLE public.telegram_links IS 'Links Stellar wallets to Telegram accounts for notifications';
+COMMENT ON TABLE "telegram_links" IS 'Links Stellar wallets to Telegram accounts for notifications';

@@ -1,6 +1,7 @@
 import { Router, Response } from 'express';
 import { authenticate, AuthenticatedRequest } from '../middleware/auth';
 import prisma from '../lib/prisma';
+import { LedgerType, TxStatus, TxType } from '@prisma/client';
 
 /**
  * Stocks / RWA Routes
@@ -102,7 +103,7 @@ router.get('/quote/:symbol', async (req, res: Response) => {
 router.post('/buy', authenticate, async (req: AuthenticatedRequest, res: Response) => {
     try {
         const { symbol, units, paymentAsset = 'USDC' } = req.body;
-        const walletAddress = req.user!.publicKey;
+        const walletAddress = req.user!.walletAddress;
 
         if (!symbol || !units || units <= 0) {
             return res.status(400).json({
@@ -167,10 +168,10 @@ router.post('/buy', authenticate, async (req: AuthenticatedRequest, res: Respons
                 toAddress: 'STOCK_ESCROW',
                 amount: totalCost,
                 asset: paymentAsset,
-                type: 'STOCK_BUY',
-                status: 'SUCCESS',
+                type: TxType.STOCK,
+                status: TxStatus.CONFIRMED,
                 memo: `Buy ${units} ${symbol}`,
-                ledger: 'OFF_CHAIN',
+                ledger: LedgerType.OFFCHAIN,
             },
         });
 
@@ -209,7 +210,7 @@ router.post('/buy', authenticate, async (req: AuthenticatedRequest, res: Respons
 router.post('/sell', authenticate, async (req: AuthenticatedRequest, res: Response) => {
     try {
         const { symbol, units } = req.body;
-        const walletAddress = req.user!.publicKey;
+        const walletAddress = req.user!.walletAddress;
 
         if (!symbol || !units || units <= 0) {
             return res.status(400).json({
@@ -270,10 +271,10 @@ router.post('/sell', authenticate, async (req: AuthenticatedRequest, res: Respon
                 toAddress: walletAddress,
                 amount: saleValue,
                 asset: 'USDC',
-                type: 'STOCK_SELL',
-                status: 'SUCCESS',
+                type: TxType.STOCK,
+                status: TxStatus.CONFIRMED,
                 memo: `Sell ${units} ${symbol}`,
-                ledger: 'OFF_CHAIN',
+                ledger: LedgerType.OFFCHAIN,
             },
         });
 
@@ -314,7 +315,7 @@ router.post('/sell', authenticate, async (req: AuthenticatedRequest, res: Respon
  */
 router.get('/portfolio', authenticate, async (req: AuthenticatedRequest, res: Response) => {
     try {
-        const walletAddress = req.user!.publicKey;
+        const walletAddress = req.user!.walletAddress;
 
         const positions = await prisma.stockPosition.findMany({
             where: { walletAddress },

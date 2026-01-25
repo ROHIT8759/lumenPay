@@ -35,7 +35,7 @@ export class NotificationService {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    chat_id: link.telegramChat || link.telegramUserId,
+                    chat_id: link.chatId || link.telegramUserId,
                     text: formattedMessage,
                     parse_mode: 'HTML',
                 }),

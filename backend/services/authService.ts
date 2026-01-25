@@ -87,7 +87,12 @@ export class AuthService {
         if (nonceData.expiresAt < new Date()) {
             // Clean up expired nonce
             await this.prisma.authNonce.delete({
-                where: { id: nonceData.id },
+                where: {
+                    walletAddress_nonce: {
+                        walletAddress: nonceData.walletAddress,
+                        nonce: nonceData.nonce,
+                    },
+                },
             });
 
             return {
@@ -115,7 +120,12 @@ export class AuthService {
 
             // Delete nonce after successful verification (one-time use)
             await this.prisma.authNonce.delete({
-                where: { id: nonceData.id },
+                where: {
+                    walletAddress_nonce: {
+                        walletAddress: nonceData.walletAddress,
+                        nonce: nonceData.nonce,
+                    },
+                },
             });
 
             return {

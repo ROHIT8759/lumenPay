@@ -121,10 +121,10 @@ class RampService {
             data: {
                 walletAddress: intent.walletAddress,
                 ledger: LedgerType.HYBRID,
-                type: TxType.ON_RAMP,
+                type: TxType.ONRAMP,
                 asset: intent.asset,
                 amount: intent.cryptoAmount!,
-                status: TxStatus.SUCCESS,
+                status: TxStatus.CONFIRMED,
                 memo: `On-ramp: ${intent.inrAmount} INR`,
             },
         });
@@ -312,10 +312,10 @@ class RampService {
             data: {
                 walletAddress: intent.walletAddress,
                 ledger: LedgerType.HYBRID,
-                type: TxType.OFF_RAMP,
+                type: TxType.OFFRAMP,
                 asset: intent.asset,
                 amount: intent.cryptoAmount,
-                status: TxStatus.SUCCESS,
+                status: TxStatus.CONFIRMED,
                 txHash: intent.lockTxHash,
                 memo: `Off-ramp: ${intent.inrAmount} INR`,
             },

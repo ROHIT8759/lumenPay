@@ -1,10 +1,8 @@
-import dotenv from 'dotenv';
-dotenv.config({ path: '../.env' }); // Load from backend/.env
-
 import { Router, Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
 import { AuthService } from '../services/authService';
 import { tokenService } from '../services/tokenService';
+import prisma from '../lib/prisma';
+import { authenticate, AuthenticatedRequest } from '../middleware/auth';
 
 /**
  * Authentication Routes
@@ -15,30 +13,29 @@ import { tokenService } from '../services/tokenService';
  */
 
 const router = Router();
-const prisma = new PrismaClient();
 const authService = new AuthService(prisma);
 
 /**
  * GET /auth/nonce
  * Request a nonce for wallet signing
- * Query params: publicKey (Stellar public key)
+ * Query params: walletAddress (Stellar public key)
  */
 router.get('/nonce', async (req: Request, res: Response) => {
     try {
-        const { publicKey } = req.query;
+        const { walletAddress } = req.query;
 
-        if (!publicKey || typeof publicKey !== 'string') {
+        if (!walletAddress || typeof walletAddress !== 'string') {
             return res.status(400).json({
-                error: 'Missing publicKey parameter',
+                error: 'Missing walletAddress parameter',
             });
         }
 
-        const nonceData = await authService.generateNonce(publicKey);
+        const nonceData = await authService.generateNonce(walletAddress);
 
         res.json({
             nonce: nonceData.nonce,
             expiresAt: nonceData.expiresAt,
-            message: `Sign this nonce to authenticate: ${nonceData.nonce}`,
+            message: nonceData.nonce,
         });
     } catch (error: any) {
         console.error('Nonce generation error:', error);
@@ -52,22 +49,22 @@ router.get('/nonce', async (req: Request, res: Response) => {
 /**
  * POST /auth/verify
  * Verify signed nonce and issue JWT
- * Body: { publicKey, signature, nonce }
+ * Body: { walletAddress, signature, nonce }
  */
 router.post('/verify', async (req: Request, res: Response) => {
     try {
-        const { publicKey, signature, nonce } = req.body;
+        const { walletAddress, signature, nonce } = req.body;
 
-        if (!publicKey || !signature || !nonce) {
+        if (!walletAddress || !signature || !nonce) {
             return res.status(400).json({
                 error: 'Missing required fields',
-                message: 'publicKey, signature, and nonce are required',
+                message: 'walletAddress, signature, and nonce are required',
             });
         }
 
         // Verify signature
         const verifyResult = await authService.verifySignature(
-            publicKey,
+            walletAddress,
             signature,
             nonce
         );
@@ -80,18 +77,16 @@ router.post('/verify', async (req: Request, res: Response) => {
         }
 
         // Ensure user exists in database
-        const { userId } = await authService.ensureUserExists(publicKey);
+        const { userId } = await authService.ensureUserExists(walletAddress);
 
         // Issue JWT token
-        const token = tokenService.issueToken(publicKey, userId);
+        const token = tokenService.issueToken(walletAddress);
 
         res.json({
             success: true,
             token,
             user: {
-                id: userId,
-                publicKey,
-                address: publicKey, // Alias for frontend compatibility
+                walletAddress: userId,
             },
         });
     } catch (error: any) {
@@ -101,6 +96,20 @@ router.post('/verify', async (req: Request, res: Response) => {
             message: error.message,
         });
     }
+});
+
+/**
+ * GET /auth/session
+ * Validate JWT and return session metadata
+ */
+router.get('/session', authenticate, async (req: AuthenticatedRequest, res: Response) => {
+    const payload = req.user;
+    const expiresAt = payload?.exp ? payload.exp * 1000 : Date.now();
+    res.json({
+        success: true,
+        walletAddress: payload?.walletAddress,
+        expiresAt,
+    });
 });
 
 /**
@@ -118,42 +127,6 @@ router.get('/cleanup', async (req: Request, res: Response) => {
         console.error('Cleanup error:', error);
         res.status(500).json({
             error: 'Cleanup failed',
-            message: error.message,
-        });
-    }
-});
-
-/**
- * POST /auth/signup
- * Register a new wallet user (Public Key only)
- * Used during wallet creation to ensure user record exists.
- */
-router.post('/signup', async (req: Request, res: Response) => {
-    try {
-        const { publicKey } = req.body;
-
-        if (!publicKey || typeof publicKey !== 'string') {
-            return res.status(400).json({
-                error: 'Missing publicKey parameter',
-            });
-        }
-
-        // Just ensure user exists. No signature required for initial claim (standard for non-custodial)
-        // Ideally we would sign a challenge here too, but for "Create Wallet" flow we just want to init the record.
-        const { userId, isNew } = await authService.ensureUserExists(publicKey);
-
-        res.json({
-            success: true,
-            user: {
-                id: userId,
-                publicKey,
-                isNew
-            }
-        });
-    } catch (error: any) {
-        console.error('Signup error:', error);
-        res.status(500).json({
-            error: 'Signup failed',
             message: error.message,
         });
     }

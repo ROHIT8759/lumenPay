@@ -6,12 +6,18 @@ import jwt from 'jsonwebtoken';
  * Handles JWT token issuance and verification for authenticated sessions.
  */
 
-const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-change-in-production';
 const JWT_EXPIRY = '7d'; // 7 days
 
+function getJwtSecret(): string {
+    const secret = process.env.JWT_SECRET;
+    if (!secret) {
+        throw new Error('JWT_SECRET is required');
+    }
+    return secret;
+}
+
 export interface TokenPayload {
-    publicKey: string;
-    userId: string;
+    walletAddress: string;
     iat?: number;
     exp?: number;
 }
@@ -19,17 +25,15 @@ export interface TokenPayload {
 export class TokenService {
     /**
      * Issue a JWT token for an authenticated wallet
-     * @param publicKey Stellar public key
-     * @param userId User ID from database
+     * @param walletAddress Stellar public key
      * @returns JWT token string
      */
-    issueToken(publicKey: string, userId: string): string {
+    issueToken(walletAddress: string): string {
         const payload: TokenPayload = {
-            publicKey,
-            userId,
+            walletAddress,
         };
 
-        return jwt.sign(payload, JWT_SECRET, {
+        return jwt.sign(payload, getJwtSecret(), {
             expiresIn: JWT_EXPIRY,
         });
     }
@@ -41,7 +45,7 @@ export class TokenService {
      */
     verifyToken(token: string): TokenPayload | null {
         try {
-            const decoded = jwt.verify(token, JWT_SECRET) as TokenPayload;
+            const decoded = jwt.verify(token, getJwtSecret()) as TokenPayload;
             return decoded;
         } catch (error) {
             return null;

@@ -18,7 +18,7 @@ let LocalAuthentication: any = null;
 async function loadLocalAuth() {
     if (typeof window !== 'undefined' && (window as { expo?: unknown }).expo) {
         try {
-            // @ts-expect-error - expo-local-authentication is only available in Expo/React Native
+            // @ts-ignore - expo-local-authentication is only available in Expo/React Native
             LocalAuthentication = await import('expo-local-authentication');
         } catch {
             // Module not available

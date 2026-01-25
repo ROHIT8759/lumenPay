@@ -25,7 +25,7 @@ const txRelayService = new TxRelayService(prisma);
 router.post('/build-payment', authenticate, async (req: AuthenticatedRequest, res: Response) => {
     try {
         const { to, amount, assetCode, assetIssuer } = req.body;
-        const from = req.user!.publicKey;
+        const from = req.user!.walletAddress;
 
         if (!to || !amount) {
             return res.status(400).json({
@@ -64,8 +64,8 @@ router.post('/build-payment', authenticate, async (req: AuthenticatedRequest, re
 router.post('/submit', authenticate, async (req: AuthenticatedRequest, res: Response) => {
     try {
         const { signedXDR, to, amount, assetCode, assetIssuer } = req.body;
-        const from = req.user!.publicKey;
-        const userId = req.user!.userId;
+        const walletAddress = req.user!.walletAddress;
+        const from = walletAddress;
 
         if (!signedXDR) {
             return res.status(400).json({
@@ -96,7 +96,7 @@ router.post('/submit', authenticate, async (req: AuthenticatedRequest, res: Resp
         // Record transaction in database
         if (to && amount) {
             await txRelayService.recordTransaction(
-                userId,
+                walletAddress,
                 result.hash!,
                 from,
                 to,
